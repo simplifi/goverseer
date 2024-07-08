@@ -23,6 +23,10 @@ type GceWatcherConfig struct {
 	// Key is the key to watch in the GCE metadata
 	Key string `yaml:"key" validate:"required"`
 
+	// Recurse is whether to recurse the metadata keys
+	// See: https://cloud.google.com/compute/docs/metadata/querying-metadata#aggcontents
+	Recursive bool `yaml:"recurse,omitempty"`
+
 	// MetadataUrl is the URL to the GCE metadata server
 	// The default is the GCE metadata server's default URL
 	// You only need to set this if you are running the watcher outside of GCE

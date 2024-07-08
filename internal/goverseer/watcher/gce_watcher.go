@@ -30,6 +30,9 @@ type GCEWatcher struct {
 	// Key is the key to watch in the GCE metadata
 	Key string
 
+	// Recursive is whether to recurse the metadata keys
+	Recursive bool
+
 	// client is the resty client used to make requests
 	client *resty.Client
 
@@ -50,8 +53,9 @@ type GCEWatcher struct {
 // Source must be either 'instance' or 'project'
 // Key is the key to watch in the GCE metadata
 // MetadataUrl is the URL to the GCE metadata server
+// Recursive is whether to recurse the metadata keys
 // log is the logger
-func NewGCEWatcher(Source, Key, MetadataUrl string, log *slog.Logger) (*GCEWatcher, error) {
+func NewGCEWatcher(Source, Key, MetadataUrl string, Recursive bool, log *slog.Logger) (*GCEWatcher, error) {
 	// Check that Source is either 'instance' or 'project'
 	if Source != metadataSourceInstance && Source != metadataSourceProject {
 		return nil, fmt.Errorf("source must be either 'instance' or 'project'")
@@ -71,6 +75,7 @@ func NewGCEWatcher(Source, Key, MetadataUrl string, log *slog.Logger) (*GCEWatch
 
 	w := &GCEWatcher{
 		Key:       Key,
+		Recursive: Recursive,
 		client:    client,
 		lastValue: "",
 		log:       log,
@@ -105,6 +110,7 @@ func (w *GCEWatcher) awaitChange() (string, error) {
 		SetContext(w.ctx).
 		SetQueryParam("wait_for_change", "true").
 		SetQueryParam("last_etag", w.lastValue).
+		SetQueryParam("recursive", fmt.Sprintf("%v", w.Recursive)).
 		Get(w.Key)
 
 	// If we are shutting down, return early to avoid other errors firing
@@ -128,6 +134,9 @@ func (w *GCEWatcher) Watch(changes chan interface{}, wg *sync.WaitGroup) {
 
 	w.log.Info("starting watcher")
 
+	// TODO: When this errors, we might want to have a backoff
+	// because it spams the shit out of the logs, and depending on the error it
+	// could hammer the metadata server
 	for {
 		select {
 		case <-w.ctx.Done():
