@@ -1,0 +1,13 @@
+---
+name: file-log example
+
+watcher:
+  type: file
+  config:
+    path: /tmp/foo
+    poll_seconds: 1
+
+executor:
+  type: dummy
+
+

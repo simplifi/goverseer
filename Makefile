@@ -1,0 +1,54 @@
+TAG?=""
+
+.DEFAULT_GOAL := test
+
+# Run all tests
+.PHONY: test
+test: fmt vet test-unit go-mod-tidy
+
+# Run unit tests
+.PHONY: test-unit
+test-unit:
+	go test -v -race ./...
+
+# Clean go.mod
+.PHONY: go-mod-tidy
+go-mod-tidy:
+	go mod tidy
+	git diff --exit-code go.sum
+
+# Check formatting
+.PHONY: fmt
+fmt:
+	test -z "$(shell gofmt -l .)"
+
+# Run vet
+.PHONY: vet
+vet:
+	go vet ./...
+
+# Run a test release with goreleaser
+.PHONY: test-release
+test-release:
+	goreleaser release --snapshot --skip=publish --clean
+
+# Clean up any cruft left over from old builds
+.PHONY: clean
+clean:
+	rm -rf goverseer dist/
+
+# Build the application
+.PHONY: build
+build: clean
+	CGO_ENABLED=0 go build ./cmd/goverseer
+
+# Create a git tag
+.PHONY: tag
+tag:
+	git tag -a $(TAG) -m "Release $(TAG)"
+	git push origin $(TAG)
+
+# Requires GITHUB_TOKEN environment variable to be set
+.PHONY: release
+release: clean
+	goreleaser release --clean
