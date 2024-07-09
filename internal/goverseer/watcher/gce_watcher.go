@@ -86,7 +86,7 @@ func NewGCEWatcher(Source, Key, MetadataUrl string, Recursive bool, log *slog.Lo
 }
 
 // SetLastValue sets the last value to the current ETag
-func (w *GCEWatcher) SetLastValue() error {
+func (w *GCEWatcher) setLastValue() error {
 	resp, err := w.client.R().
 		SetContext(w.ctx).
 		Get(w.Key)
@@ -152,7 +152,7 @@ func (w *GCEWatcher) Watch(changes chan interface{}, wg *sync.WaitGroup) {
 
 			changes <- value
 
-			if err := w.SetLastValue(); err != nil {
+			if err := w.setLastValue(); err != nil {
 				w.log.Error("error updating last value", slog.String("key", w.Key), tint.Err(err))
 				continue
 			}

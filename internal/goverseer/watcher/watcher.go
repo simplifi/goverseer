@@ -19,10 +19,12 @@ type Watcher interface {
 // The log is the logger
 func NewWatcher(cfg *config.Config, log *slog.Logger) (Watcher, error) {
 	switch v := cfg.Watcher.Config.(type) {
+	case config.DummyWatcherConfig:
+		return NewDummyWatcher(v.PollMilliseconds, log)
 	case config.FileWatcherConfig:
 		return NewFileWatcher(v.Path, v.PollSeconds, log)
 	case config.GceWatcherConfig:
-		return NewGCEWatcher(v.Source, v.Key, v.MetadataUrl, log)
+		return NewGCEWatcher(v.Source, v.Key, v.MetadataUrl, v.Recursive, log)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}

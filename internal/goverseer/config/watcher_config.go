@@ -6,6 +6,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DummyWatcherConfig is the configuration for a dummy watcher
+type DummyWatcherConfig struct {
+	// PollMilliseconds is the number of milliseconds to wait between ticks
+	PollMilliseconds int `yaml:"poll_milliseconds" validate:"gte=100"`
+}
+
 // FileWatcherConfig is the configuration for a file watcher
 type FileWatcherConfig struct {
 	// Path is the path to the file to watch
@@ -61,6 +67,12 @@ func (dc *DynamicWatcherConfig) UnmarshalYAML(unmarshal func(interface{}) error)
 	}
 
 	switch dc.Type {
+	case "dummy":
+		var config DummyWatcherConfig
+		if err := yaml.Unmarshal(configData, &config); err != nil {
+			return err
+		}
+		dc.Config = config
 	case "file":
 		var config FileWatcherConfig
 		if err := yaml.Unmarshal(configData, &config); err != nil {
