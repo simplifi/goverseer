@@ -4,10 +4,11 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/simplifi/goverseer/internal/goverseer/config"
-	"github.com/simplifi/goverseer/internal/goverseer/manager"
+	"github.com/simplifi/goverseer/internal/goverseer/overseer"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,7 @@ func init() {
 func loadConfigs() []*config.Config {
 	cfgs, err := config.FromPath(configDir)
 	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		log.Fatalf("error loading configuration: %v", err)
 	}
 	return cfgs
 }
@@ -53,32 +54,42 @@ func validateConfigs(cfgs []*config.Config) {
 	}
 
 	if len(errors) > 0 {
-		log.Printf("Validation errors found in %d configuration(s):\n", len(errors))
+		log.Printf("validation errors found in %d configuration(s):\n", len(errors))
 		for _, err := range errors {
 			log.Printf("- %s\n", err.Error())
 		}
-		log.Fatalf("\nExiting due to validation errors")
+		log.Fatalf("\nexiting due to validation errors")
 	}
 }
 
 // start starts the goverseer service
 func start() {
+	wg := sync.WaitGroup{}
+	stop := make(chan struct{})
+
 	cfgs := loadConfigs()
 	validateConfigs(cfgs)
 
-	mgr := manager.NewManager(cfgs)
-	go func() {
-		if err := mgr.Run(); err != nil {
-			log.Fatalf("Manager run error: %v", err)
+	for _, cfg := range cfgs {
+		overseer, err := overseer.NewOverseer(cfg, stop)
+		if err != nil {
+			log.Fatalf("overseer run error: %v", err)
 		}
-	}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			overseer.Run()
+		}()
+	}
 
-	// Listen for OS signals
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	// Listen for OS signals and wait
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-signalChan
+	log.Printf("\nreceived signal: %s", sig)
+	log.Println("shutting down...")
 
-	sig := <-sigCh
-	log.Printf("\nReceived signal: %s", sig)
-	log.Println("Shutting down...")
-	mgr.Stop()
+	close(stop)
+	wg.Wait()
+	log.Println("shutdown complete")
 }

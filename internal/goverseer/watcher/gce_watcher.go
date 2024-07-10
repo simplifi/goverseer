@@ -3,11 +3,13 @@ package watcher
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
-	"sync"
+	"net/http"
+	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/lmittmann/tint"
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
 var (
@@ -15,14 +17,30 @@ var (
 	_ Watcher = (*GCEWatcher)(nil)
 )
 
+func init() {
+	factory.Register("gce", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
+		v, ok := cfg.(config.GceWatcherConfig)
+		if !ok {
+			return nil, fmt.Errorf("invalid config for GCE watcher")
+		}
+		return NewGCEWatcher(v.Source, v.Key, v.MetadataUrl, v.Recursive, log)
+	})
+}
+
 const (
-	// DefaultMetadataUrl is the default URL for GCE metadata
+	// DefaultBaseMetadataUrl is the default URL for GCE metadata
 	// it can be overridden by setting the metadata_url in the config
 	// this can be useful for testing
-	// e.g. http://localhost:8888/computeMetadata/v1/
-	DefaultMetadataUrl     = "http://metadata.google.internal/computeMetadata/v1/"
-	metadataSourceInstance = "instance"
-	metadataSourceProject  = "project"
+	// e.g. http://localhost:8888/computeMetadata/v1
+	DefaultBaseMetadataUrl = "http://metadata.google.internal/computeMetadata/v1"
+
+	// MetadataSourceInstance is the instance metadata source
+	MetadataSourceInstance = "instance"
+
+	// MetadataSourceProject is the project metadata source
+	MetadataSourceProject = "project"
+
+	metadataErrWait = 1 * time.Second
 )
 
 // GCEWatcher watches a GCE metadata key for changes
@@ -33,11 +51,12 @@ type GCEWatcher struct {
 	// Recursive is whether to recurse the metadata keys
 	Recursive bool
 
-	// client is the resty client used to make requests
-	client *resty.Client
+	// metadataUrl is the URL this watcher will use when reading from the GCE
+	// metadata server
+	MetadataUrl string
 
-	// lastValue is the last value used to compare changes, it is set to the ETag
-	lastValue string
+	// lastETag is the last etag, used to compare changes
+	lastETag string
 
 	// log is the logger
 	log *slog.Logger
@@ -52,109 +71,113 @@ type GCEWatcher struct {
 // NewGCEWatcher creates a new GCEWatcher
 // Source must be either 'instance' or 'project'
 // Key is the key to watch in the GCE metadata
-// MetadataUrl is the URL to the GCE metadata server
+// BaseMetadataUrl is the URL to the GCE metadata server
 // Recursive is whether to recurse the metadata keys
-// log is the logger
-func NewGCEWatcher(Source, Key, MetadataUrl string, Recursive bool, log *slog.Logger) (*GCEWatcher, error) {
+func NewGCEWatcher(Source, Key, BaseMetadataUrl string, Recursive bool, log *slog.Logger) (*GCEWatcher, error) {
 	// Check that Source is either 'instance' or 'project'
-	if Source != metadataSourceInstance && Source != metadataSourceProject {
+	if Source != MetadataSourceInstance && Source != MetadataSourceProject {
 		return nil, fmt.Errorf("source must be either 'instance' or 'project'")
 	}
 
 	// Set default MetadataUrl if not provided
-	if MetadataUrl == "" {
-		MetadataUrl = DefaultMetadataUrl
+	if BaseMetadataUrl == "" {
+		BaseMetadataUrl = DefaultBaseMetadataUrl
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	client := resty.New().
-		SetBaseURL(fmt.Sprintf("%s/%s/attributes", MetadataUrl, Source)).
-		SetHeader("Metadata-Flavor", "Google").
-		SetTimeout(0) // No timeout (infinite)
-
 	w := &GCEWatcher{
-		Key:       Key,
-		Recursive: Recursive,
-		client:    client,
-		lastValue: "",
-		log:       log,
-		ctx:       ctx,
-		cancel:    cancel,
+		Key:         Key,
+		MetadataUrl: fmt.Sprintf("%s/%s/attributes", BaseMetadataUrl, Source),
+		Recursive:   Recursive,
+		lastETag:    "",
+		log:         log,
+		ctx:         ctx,
+		cancel:      cancel,
 	}
 	return w, nil
 }
 
-// SetLastValue sets the last value to the current ETag
-func (w *GCEWatcher) setLastValue() error {
-	resp, err := w.client.R().
-		SetContext(w.ctx).
-		Get(w.Key)
-
-	// If we are shutting down, return early to avoid other errors firing
-	if w.ctx.Err() == context.Canceled {
-		return nil
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to get etag: %w", err)
-	}
-
-	w.lastValue = resp.Header().Get("ETag")
-	return nil
+type gceMetadataResponse struct {
+	etag string
+	body string
 }
 
-// awaitChange waits for a change in the GCE metadata
-func (w *GCEWatcher) awaitChange() (string, error) {
-	response, err := w.client.R().
-		SetContext(w.ctx).
-		SetQueryParam("wait_for_change", "true").
-		SetQueryParam("last_etag", w.lastValue).
-		SetQueryParam("recursive", fmt.Sprintf("%v", w.Recursive)).
-		Get(w.Key)
-
-	// If we are shutting down, return early to avoid other errors firing
-	if w.ctx.Err() == context.Canceled {
-		return "", nil
+func (w *GCEWatcher) getMetadata() (*gceMetadataResponse, error) {
+	client := http.Client{
+		Timeout: 0, // No timeout (infinite)
 	}
 
-	// Check for other errors.
+	urlWithKey := fmt.Sprintf("%s/%s", w.MetadataUrl, w.Key)
+	req, err := http.NewRequestWithContext(w.ctx, "GET", urlWithKey, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return response.String(), nil
+	req.Header.Set("Metadata-Flavor", "Google")
+	q := req.URL.Query()
+	q.Add("wait_for_change", "true")
+	q.Add("recursive", fmt.Sprintf("%v", w.Recursive))
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for a non-200 status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return &gceMetadataResponse{
+		etag: resp.Header.Get("ETag"),
+		body: string(body),
+	}, nil
 }
 
 // Watch watches the GCE metadata for changes and sends value to changes channel
 // The changes channel is where the value is sent when it changes
-func (w *GCEWatcher) Watch(changes chan interface{}, wg *sync.WaitGroup) {
-	defer w.cancel()
-	defer wg.Done()
-
+func (w *GCEWatcher) Watch(changes chan interface{}) {
 	w.log.Info("starting watcher")
 
-	// TODO: When this errors, we might want to have a backoff
-	// because it spams the shit out of the logs, and depending on the error it
-	// could hammer the metadata server
 	for {
 		select {
 		case <-w.ctx.Done():
 			return
 		default:
-			w.log.Info("waiting for change", slog.String("key", w.Key))
-
-			value, err := w.awaitChange()
+			// Get the metadata
+			gceMetadata, err := w.getMetadata()
 			if err != nil {
-				w.log.Error("error watching changes", slog.String("key", w.Key), tint.Err(err))
+				// Avoid logging errors if the context was canceled mid-request
+				if w.ctx.Err() == context.Canceled {
+					continue
+				}
+
+				w.log.Error("error getting metadata",
+					tint.Err(err))
+				time.Sleep(metadataErrWait)
 				continue
 			}
 
-			changes <- value
+			// We only send a change if it has actually changed
+			if w.lastETag != gceMetadata.etag {
+				w.log.Info("change detected",
+					"key", w.Key,
+					"etag", gceMetadata.etag,
+					"previous_etag", w.lastETag)
 
-			if err := w.setLastValue(); err != nil {
-				w.log.Error("error updating last value", slog.String("key", w.Key), tint.Err(err))
-				continue
+				// Send the new value to the changes channel
+				changes <- gceMetadata.body
+
+				// Update the last value with the current etag
+				w.lastETag = gceMetadata.etag
 			}
 		}
 	}

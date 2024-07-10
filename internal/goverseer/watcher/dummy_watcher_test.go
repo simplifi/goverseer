@@ -24,7 +24,10 @@ func TestDummyWatcher_Watch(t *testing.T) {
 
 	// Start watching the file
 	wg.Add(1)
-	go dummyWatcher.Watch(changes, wg)
+	go func() {
+		defer wg.Done()
+		dummyWatcher.Watch(changes)
+	}()
 
 	// Assert that the tick was detected
 	// We limit the time to avoid hanging tests
@@ -43,9 +46,9 @@ func TestDummyWatcher_Watch(t *testing.T) {
 func TestNewDummyWatcher(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 
-	pollMilliseconds := 100
-	watcher, err := NewDummyWatcher(pollMilliseconds, log)
+	pollSeconds := 1
+	watcher, err := NewDummyWatcher(pollSeconds, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, watcher)
-	assert.Equal(t, time.Duration(pollMilliseconds)*time.Millisecond, watcher.PollInterval)
+	assert.Equal(t, time.Duration(pollSeconds)*time.Second, watcher.PollInterval)
 }

@@ -3,29 +3,21 @@ package executor
 import (
 	"log/slog"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/lmittmann/tint"
+	"github.com/stretchr/testify/assert"
 )
 
-// TODO: We don't have a good way to test this right now. We need to refactor
-// the code to make it testable. Perhaps we could add a channel to the Execute
-// method that we can use to send the output of the command to the test?
+// NOTE: This tests that the command executor can run a command
+// it does NOT test that the command itself succeeds
+// this is intentional as we don't care if the command succeeds or fails as long
+// as it runs and outputs to stderr/stdout
 func TestCommandExecutor_Execute(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 
-	// Create a CommandExecutor instance
 	command := "echo 'Hello, World!'"
 	executor := NewCommandExecutor(command, log)
-
-	// Create a wait group to wait for the execution to finish
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Execute the command
-	executor.Execute("foo", &wg)
-
-	// Wait for the execution to finish
-	wg.Wait()
+	err := executor.Execute("foo")
+	assert.NoError(t, err)
 }

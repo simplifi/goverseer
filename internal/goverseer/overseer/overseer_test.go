@@ -16,7 +16,7 @@ func TestOverseer(t *testing.T) {
 		Watcher: config.DynamicWatcherConfig{
 			Type: "dummy",
 			Config: config.DummyWatcherConfig{
-				PollMilliseconds: 100,
+				PollSeconds: 1,
 			},
 		},
 		Executor: config.DynamicExecutorConfig{
@@ -33,7 +33,8 @@ func TestOverseer(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		overseer.Run(&wg)
+		defer wg.Done()
+		overseer.Run()
 	}()
 
 	// Wait for a short time to let the overseer run

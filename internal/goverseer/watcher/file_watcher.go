@@ -1,18 +1,29 @@
 package watcher
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/lmittmann/tint"
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
 var (
 	// Ensure this implements the Watcher interface
 	_ Watcher = (*FileWatcher)(nil)
 )
+
+func init() {
+	factory.Register("file", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
+		v, ok := cfg.(config.FileWatcherConfig)
+		if !ok {
+			return nil, fmt.Errorf("invalid config for file watcher")
+		}
+		return NewFileWatcher(v.Path, v.PollSeconds, log)
+	})
+}
 
 // FileWatcher watches a file for changes and sends the path to the changeCh
 type FileWatcher struct {
@@ -35,7 +46,6 @@ type FileWatcher struct {
 // NewFileWatcher creates a new FileWatcher
 // The Path is the path to the file to watch
 // The PollSeconds is the interval to poll the file for changes
-// The log is the logger
 func NewFileWatcher(Path string, PollSeconds int, log *slog.Logger) (*FileWatcher, error) {
 	w := &FileWatcher{
 		Path:         Path,
@@ -50,9 +60,7 @@ func NewFileWatcher(Path string, PollSeconds int, log *slog.Logger) (*FileWatche
 
 // Watch watches the file for changes and sends the path to the changes channel
 // The changes channel is where the path to the file is sent when it changes
-func (w *FileWatcher) Watch(changes chan interface{}, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (w *FileWatcher) Watch(changes chan interface{}) {
 	w.log.Info("starting watcher")
 	for {
 		select {

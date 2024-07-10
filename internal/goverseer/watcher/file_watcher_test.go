@@ -49,7 +49,10 @@ func TestFileWatcher_Watch(t *testing.T) {
 
 	// Start watching the file
 	wg.Add(1)
-	go fileWatcher.Watch(changes, wg)
+	go func() {
+		defer wg.Done()
+		fileWatcher.Watch(changes)
+	}()
 
 	// Touch the file to trigger a change
 	touchFile(t, testFilePath)

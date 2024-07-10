@@ -1,20 +1,12 @@
 package config
 
 import (
-	"fmt"
-
 	"gopkg.in/yaml.v3"
 )
 
-// CommandExecutorConfig is the configuration for a command executor
-type CommandExecutorConfig struct {
-	// Command is the command to execute
-	Command string `yaml:"command" validate:"required"`
+var executorConfigFactory = &ConfigFactory{
+	creators: make(map[string]func([]byte) (interface{}, error)),
 }
-
-// DummyExecutorConfig is the configuration for a dummy executor
-// this is used for testing and has no configuration
-type DummyExecutorConfig struct{}
 
 // DynamicExecutorConfig is a dynamic configuration for an executor
 type DynamicExecutorConfig struct {
@@ -41,22 +33,11 @@ func (dc *DynamicExecutorConfig) UnmarshalYAML(unmarshal func(interface{}) error
 		return err
 	}
 
-	switch dc.Type {
-	case "command":
-		var config CommandExecutorConfig
-		if err := yaml.Unmarshal(configData, &config); err != nil {
-			return err
-		}
-		dc.Config = config
-	case "dummy":
-		var config DummyExecutorConfig
-		if err := yaml.Unmarshal(configData, &config); err != nil {
-			return err
-		}
-		dc.Config = config
-	default:
-		return fmt.Errorf("unknown config type: %s", dc.Type)
+	config, err := executorConfigFactory.Create(dc.Type, configData)
+	if err != nil {
+		return err
 	}
+	dc.Config = config
 
 	return nil
 }

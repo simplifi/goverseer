@@ -6,7 +6,7 @@ watcher:
   config:
     source: instance
     key: foo
-    metadata_url: http://localhost:8888/computeMetadata/v1/
+    metadata_url: http://localhost:8888/computeMetadata/v1
 
 executor:
   type: command
@@ -15,3 +15,4 @@ executor:
         #!/bin/bash
         echo "Key changed!"
         echo "$GOVERSEER_DATA"
+        cat $GOVERSEER_DATA

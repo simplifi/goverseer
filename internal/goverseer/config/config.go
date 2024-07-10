@@ -1,15 +1,41 @@
 package config
 
+// TODO: Better validation, handle defaults more gracefully
+
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 )
 
-// TODO: Better validation, and handle defaults more gracefully
+// ConfigFactory is a factory for creating configuration objects
+type ConfigFactory struct {
+	mu       sync.RWMutex
+	creators map[string]func([]byte) (interface{}, error)
+}
+
+// Register registers a creator function for a configuration type
+func (cf *ConfigFactory) Register(configType string, creator func([]byte) (interface{}, error)) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	cf.creators[configType] = creator
+}
+
+// Create creates a configuration object from the given data
+func (cf *ConfigFactory) Create(configType string, data []byte) (interface{}, error) {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
+	creator, exists := cf.creators[configType]
+	if !exists {
+		return nil, fmt.Errorf("unknown config type: %s", configType)
+	}
+	return creator(data)
+}
 
 // Config is the configuration for a watcher and executor
 type Config struct {

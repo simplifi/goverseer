@@ -1,7 +1,6 @@
 package watcher
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/lmittmann/tint"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,35 +17,23 @@ func TestGCEWatcher_Watch(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	mockResponseChan := make(chan struct{})
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If query param has `wait_for_change` then wait for a signal
-		// This is used to simulate a change in the metadata value on GCE
-		if r.URL.Query().Get("wait_for_change") == "true" {
-			<-mockResponseChan
-		}
+		// Wait for a signal, this is used to simulate a change in the metadata
+		// value on GCE during tests
+		<-mockResponseChan
+		w.Header().Add("ETag", "mock-etag")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("mock response"))
 	}))
 	defer mockServer.Close()
 
-	// Create a Resty client with the mock server's URL
-	mockClient := resty.New().SetBaseURL(mockServer.URL)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	w := &GCEWatcher{
-		Key:       "test-key",
-		Recursive: true,
-		client:    mockClient,
-		lastValue: "",
-		log:       log,
-		ctx:       ctx,
-		cancel:    cancel,
-	}
+	w, _ := NewGCEWatcher("instance", "test-key", mockServer.URL, true, log)
 
 	changes := make(chan interface{})
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		w.Watch(changes, &wg)
+		defer wg.Done()
+		w.Watch(changes)
 	}()
 
 	// Simulate a change by closing the mock response channel, which will unblock

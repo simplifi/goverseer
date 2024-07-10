@@ -13,6 +13,7 @@ import (
 
 const (
 	// DefaultChangeBuffer is the default size of the change buffer
+	// This is the number of changes that can be buffered before the watcher blocks
 	DefaultChangeBuffer = 100
 )
 
@@ -39,18 +40,22 @@ type Overseer struct {
 
 // NewOverseer creates a new Overseer
 func NewOverseer(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
-	log := slog.New(tint.NewHandler(os.Stderr, nil)).With("overseer", cfg.Name)
+	// Setup the logger
+	log := slog.
+		New(tint.NewHandler(os.Stdout, nil)).
+		With("overseer", cfg.Name)
+
 	if cfg.ChangeBuffer == 0 {
 		cfg.ChangeBuffer = DefaultChangeBuffer
 	}
 	changes := make(chan interface{}, cfg.ChangeBuffer)
 
-	watcher, err := watcher.NewWatcher(cfg, log)
+	watcher, err := watcher.NewWatcher(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	executor, err := executor.NewExecutor(cfg, log)
+	executor, err := executor.NewExecutor(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +72,13 @@ func NewOverseer(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
 }
 
 // Run starts the overseer
-func (o *Overseer) Run(wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (o *Overseer) Run() {
 	// Send data to the change channel for processing
 	o.wg.Add(1)
-	go o.watcher.Watch(o.changes, &o.wg)
+	go func() {
+		defer o.wg.Done()
+		o.watcher.Watch(o.changes)
+	}()
 
 	for {
 		select {
@@ -81,7 +87,12 @@ func (o *Overseer) Run(wg *sync.WaitGroup) {
 			return
 		case data := <-o.changes:
 			o.wg.Add(1)
-			go o.executor.Execute(data, &o.wg)
+			go func() {
+				defer o.wg.Done()
+				if err := o.executor.Execute(data); err != nil {
+					o.log.Error("error running executor", tint.Err(err))
+				}
+			}()
 		}
 	}
 }

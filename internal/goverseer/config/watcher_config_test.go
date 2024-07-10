@@ -15,7 +15,7 @@ func TestDummyWatcherConfig(t *testing.T) {
 	yamlDataValid := []byte(`
 type: dummy
 config:
-  poll_milliseconds: 100
+  poll_seconds: 100
 `)
 	var dynamicConfigValid DynamicWatcherConfig
 	err := yaml.Unmarshal(yamlDataValid, &dynamicConfigValid)
@@ -24,7 +24,7 @@ config:
 	err = validate.Struct(dynamicConfigValid)
 	assert.NoError(t, err)
 	assert.Equal(t, "dummy", dynamicConfigValid.Type)
-	assert.Equal(t, DummyWatcherConfig{PollMilliseconds: 100}, dynamicConfigValid.Config)
+	assert.Equal(t, DummyWatcherConfig{PollSeconds: 100}, dynamicConfigValid.Config)
 
 	// Invalid command executor configuration
 	yamlDataInvalid := []byte(`

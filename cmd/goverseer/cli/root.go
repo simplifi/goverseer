@@ -15,6 +15,7 @@ var (
 )
 
 func init() {
+	// Disable timestamps in the log output for the CLI
 	log.SetFlags(0)
 }
 

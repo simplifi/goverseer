@@ -1,15 +1,27 @@
 package watcher
 
 import (
+	"fmt"
 	"log/slog"
-	"sync"
 	"time"
+
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
 var (
 	// Ensure this implements the Watcher interface
 	_ Watcher = (*DummyWatcher)(nil)
 )
+
+func init() {
+	factory.Register("dummy", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
+		v, ok := cfg.(config.DummyWatcherConfig)
+		if !ok {
+			return nil, fmt.Errorf("invalid config for dummy watcher")
+		}
+		return NewDummyWatcher(v.PollSeconds, log)
+	})
+}
 
 // DummyWatcher is a dummy watcher that ticks at a regular interval, not
 // watching anything, like a dummy
@@ -25,10 +37,11 @@ type DummyWatcher struct {
 }
 
 // NewDummyWatcher creates a new DummyWatcher
-// The log is the logger
-func NewDummyWatcher(PollMilliseconds int, log *slog.Logger) (*DummyWatcher, error) {
+// PollSeconds is the number of seconds to wait between ticks
+// log is the logger
+func NewDummyWatcher(PollSeconds int, log *slog.Logger) (*DummyWatcher, error) {
 	w := &DummyWatcher{
-		PollInterval: time.Duration(PollMilliseconds) * time.Millisecond,
+		PollInterval: time.Duration(PollSeconds) * time.Second,
 		log:          log,
 		stop:         make(chan struct{}),
 	}
@@ -38,9 +51,7 @@ func NewDummyWatcher(PollMilliseconds int, log *slog.Logger) (*DummyWatcher, err
 
 // Watch watches the file for changes and sends the path to the changes channel
 // The changes channel is where the path to the file is sent when it changes
-func (w *DummyWatcher) Watch(changes chan interface{}, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (w *DummyWatcher) Watch(changes chan interface{}) {
 	w.log.Info("starting watcher")
 	for {
 		select {
