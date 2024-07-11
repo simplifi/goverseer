@@ -13,20 +13,18 @@ const (
 	testConfigWatcherToDummy = `
 name: WatcherToDummy
 watcher:
-  file:
-    path: /tmp/test1
+  dummy:
+    poll_seconds: 1
 executioner:
   dummy:
 `
 	testConfigGceToCommand = `
 name: GceToCommand
 watcher:
-  gce:
-    source: instance
-    key: foo
+  dummy:
+    poll_seconds: 1
 executioner:
-  command:
-    command: echo "Hello, World!"
+  dummy:
 `
 )
 
