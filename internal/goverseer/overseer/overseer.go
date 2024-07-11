@@ -38,8 +38,8 @@ type Overseer struct {
 	wg sync.WaitGroup
 }
 
-// NewOverseer creates a new Overseer
-func NewOverseer(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
+// New creates a new Overseer
+func New(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
 	// Setup the logger
 	log := slog.
 		New(tint.NewHandler(os.Stdout, nil)).
@@ -50,19 +50,19 @@ func NewOverseer(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
 	}
 	changes := make(chan interface{}, cfg.ChangeBuffer)
 
-	watcher, err := watcher.NewWatcher(cfg)
+	watcher, err := watcher.New(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	executor, err := executor.NewExecutor(cfg)
+	executor, err := executor.New(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	o := &Overseer{
-		watcher:  watcher,
-		executor: executor,
+		watcher:  *watcher,
+		executor: *executor,
 		log:      log,
 		changes:  changes,
 		stop:     stop,
@@ -106,5 +106,6 @@ func (o *Overseer) Stop() {
 	o.log.Info("waiting for overseer to finish")
 	// Wait here so we don't close the changes channel before the executor is done
 	o.wg.Wait()
+	o.log.Info("done")
 	close(o.changes)
 }

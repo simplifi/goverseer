@@ -2,17 +2,16 @@
 name: gce-exec example
 
 watcher:
-  type: gce
-  config:
+  gce:
     source: instance
     key: foo
     metadata_url: http://localhost:8888/computeMetadata/v1
 
 executor:
-  type: command
-  config:
+  command:
     command: |
         #!/bin/bash
         echo "Key changed!"
         echo "$GOVERSEER_DATA"
         cat $GOVERSEER_DATA
+        echo "Hello from stderr" >&2

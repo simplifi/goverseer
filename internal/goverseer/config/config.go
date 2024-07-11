@@ -1,46 +1,18 @@
 package config
 
-// TODO: Better validation, handle defaults more gracefully
-
 import (
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sync"
 
-	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 )
-
-// ConfigFactory is a factory for creating configuration objects
-type ConfigFactory struct {
-	mu       sync.RWMutex
-	creators map[string]func([]byte) (interface{}, error)
-}
-
-// Register registers a creator function for a configuration type
-func (cf *ConfigFactory) Register(configType string, creator func([]byte) (interface{}, error)) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-	cf.creators[configType] = creator
-}
-
-// Create creates a configuration object from the given data
-func (cf *ConfigFactory) Create(configType string, data []byte) (interface{}, error) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-	creator, exists := cf.creators[configType]
-	if !exists {
-		return nil, fmt.Errorf("unknown config type: %s", configType)
-	}
-	return creator(data)
-}
 
 // Config is the configuration for a watcher and executor
 type Config struct {
 	// Name is the name of the configuration, this will show up in logs
-	Name string `yaml:"name" validate:"required"`
+	Name string `yaml:"name"`
 
 	// Watcher is the configuration for the watcher
 	// it is dynamic because the configuration can be different for each watcher
@@ -54,13 +26,23 @@ type Config struct {
 	ChangeBuffer int `yaml:"change_buffer,omitempty"`
 }
 
-// Validate validates the configuration
-func (c *Config) Validate() error {
-	validate := validator.New(validator.WithRequiredStructEnabled())
-	err := validate.Struct(c)
-	if err != nil {
+// ValidateAndSetDefaults validates the Config and sets default values
+func (cfg *Config) ValidateAndSetDefaults() error {
+	if cfg.ChangeBuffer == 0 {
+		cfg.ChangeBuffer = 100 // default to 100
+	}
+	if cfg.ChangeBuffer < 1 {
+		return fmt.Errorf("change_buffer must be greater than or equal to 1")
+	}
+
+	if err := cfg.Watcher.ValidateAndSetDefaults(); err != nil {
 		return err
 	}
+
+	if err := cfg.Executor.ValidateAndSetDefaults(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -73,6 +55,11 @@ func FromFile(path string) (*Config, error) {
 
 	var cfg Config
 	if err := yaml.Unmarshal(cfgFile, &cfg); err != nil {
+		return nil, err
+	}
+
+	// Validate and set defaults for the configuration
+	if err := cfg.ValidateAndSetDefaults(); err != nil {
 		return nil, err
 	}
 

@@ -2,12 +2,11 @@
 name: file-log example
 
 watcher:
-  type: file
-  config:
+  file:
     path: /tmp/foo
     poll_seconds: 1
 
 executor:
-  type: dummy
+  dummy:
 
 

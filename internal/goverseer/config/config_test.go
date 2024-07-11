@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,36 +13,32 @@ const (
 	testConfigWatcherToDummy = `
 name: WatcherToDummy
 watcher:
-  type: file
-  config:
+  file:
     path: /tmp/test1
 executor:
-  type: dummy
+  dummy:
 `
 	testConfigGceToCommand = `
 name: GceToCommand
 watcher:
-  type: gce
-  config:
+  gce:
     source: instance
     key: foo
 executor:
-  type: command
-  config:
+  command:
     command: echo "Hello, World!"
 `
 )
 
-func writeTestConfigs(t *testing.T, files map[string]string) (string, []string) {
+func writeTestConfigs(t *testing.T, files ...string) (string, []string) {
 	t.Helper()
 
-	// Create a temporary directory for the config file
 	testConfigDir := t.TempDir()
-
-	// Create the temporary configuration files
 	testConfigFiles := make([]string, 0, len(files))
-	for name, content := range files {
-		configFile := filepath.Join(testConfigDir, name)
+
+	// Write out the temporary configuration files
+	for n, content := range files {
+		configFile := filepath.Join(testConfigDir, fmt.Sprintf("test%d.yaml", n))
 		testConfigFiles = append(testConfigFiles, configFile)
 		err := os.WriteFile(configFile, []byte(content), 0644)
 		if err != nil {
@@ -49,15 +46,15 @@ func writeTestConfigs(t *testing.T, files map[string]string) (string, []string) 
 		}
 	}
 
-	// Return the path and a cleanup function
+	// Return the path list of files
 	return testConfigDir, testConfigFiles
 }
 
 func TestFromPath(t *testing.T) {
-	testConfigDir, testConfigs := writeTestConfigs(t, map[string]string{
-		"watcher-to-dummy.yaml": testConfigWatcherToDummy,
-		"gce-to-command.yaml":   testConfigGceToCommand,
-	})
+	testConfigDir, testConfigs := writeTestConfigs(t,
+		testConfigWatcherToDummy,
+		testConfigGceToCommand,
+	)
 
 	// Call the FromPath function
 	configs, err := FromPath(testConfigDir)
@@ -66,9 +63,7 @@ func TestFromPath(t *testing.T) {
 }
 
 func TestFromFile(t *testing.T) {
-	_, testConfigs := writeTestConfigs(t, map[string]string{
-		"watcher-to-dummy.yaml": testConfigWatcherToDummy,
-	})
+	_, testConfigs := writeTestConfigs(t, testConfigWatcherToDummy)
 	configFile := testConfigs[0]
 
 	// Call the FromFile function
@@ -78,36 +73,38 @@ func TestFromFile(t *testing.T) {
 
 	// Check the watcher config
 	assert.Equal(t, "file", config.Watcher.Type)
-	assert.IsType(t, FileWatcherConfig{}, config.Watcher.Config)
+	assert.IsType(t, &FileWatcherConfig{}, config.Watcher.Config)
 
 	// Check the executor config
 	assert.Equal(t, "dummy", config.Executor.Type)
-	assert.IsType(t, DummyExecutorConfig{}, config.Executor.Config)
+	assert.IsType(t, &DummyExecutorConfig{}, config.Executor.Config)
 }
 
-func TestValidate(t *testing.T) {
+func TestValidateAndSetDefaults(t *testing.T) {
 	// A basic valid configuration
 	config := &Config{
 		Name: "TestConfig",
 		Watcher: DynamicWatcherConfig{
-			Type:   "file",
-			Config: "",
+			Type:   "dummy",
+			Config: &DummyWatcherConfig{},
 		},
 		Executor: DynamicExecutorConfig{
 			Type:   "dummy",
-			Config: "",
+			Config: &DummyExecutorConfig{},
 		},
 		ChangeBuffer: 10,
 	}
-	err := config.Validate()
+	err := config.ValidateAndSetDefaults()
 	assert.NoError(t, err)
 
-	// Missing required field
-	config = &Config{
-		Watcher:      DynamicWatcherConfig{},
-		Executor:     DynamicExecutorConfig{},
-		ChangeBuffer: 10,
-	}
-	err = config.Validate()
+	// Invalid configuration, ChangeBuffer less than 0
+	config.ChangeBuffer = -1
+	err = config.ValidateAndSetDefaults()
 	assert.Error(t, err)
+
+	// Check defaults are set, ChangeBuffer missing (0) so it should get the default
+	config.ChangeBuffer = 0
+	err = config.ValidateAndSetDefaults()
+	assert.NoError(t, err)
+	assert.Equal(t, 100, config.ChangeBuffer)
 }

@@ -8,25 +8,29 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDummyWatcher_Watch(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
+	cfg := &config.DummyWatcherConfig{}
+	cfg.ValidateAndSetDefaults()
 
 	// Create a channel to receive changes
 	changes := make(chan interface{})
 	wg := &sync.WaitGroup{}
 
 	// Create a new DummyWatcher
-	dummyWatcher, err := NewDummyWatcher(1, log)
+	watcher := DummyWatcher{}
+	err := watcher.Create(cfg, log)
 	assert.NoError(t, err)
-
+	t.Log(watcher.PollInterval)
 	// Start watching the file
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dummyWatcher.Watch(changes)
+		watcher.Watch(changes)
 	}()
 
 	// Assert that the tick was detected
@@ -39,16 +43,6 @@ func TestDummyWatcher_Watch(t *testing.T) {
 	}
 
 	// Stop the watcher
-	dummyWatcher.Stop()
+	watcher.Stop()
 	wg.Wait()
-}
-
-func TestNewDummyWatcher(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-
-	pollSeconds := 1
-	watcher, err := NewDummyWatcher(pollSeconds, log)
-	assert.NoError(t, err)
-	assert.NotNil(t, watcher)
-	assert.Equal(t, time.Duration(pollSeconds)*time.Second, watcher.PollInterval)
 }

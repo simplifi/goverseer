@@ -16,13 +16,7 @@ var (
 )
 
 func init() {
-	factory.Register("file", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
-		v, ok := cfg.(config.FileWatcherConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid config for file watcher")
-		}
-		return NewFileWatcher(v.Path, v.PollSeconds, log)
-	})
+	RegisterWatcher("file", func() Watcher { return &FileWatcher{} })
 }
 
 // FileWatcher watches a file for changes and sends the path to the changeCh
@@ -43,19 +37,19 @@ type FileWatcher struct {
 	stop chan struct{}
 }
 
-// NewFileWatcher creates a new FileWatcher
-// The Path is the path to the file to watch
-// The PollSeconds is the interval to poll the file for changes
-func NewFileWatcher(Path string, PollSeconds int, log *slog.Logger) (*FileWatcher, error) {
-	w := &FileWatcher{
-		Path:         Path,
-		PollInterval: time.Duration(PollSeconds) * time.Second,
-		lastValue:    time.Now(),
-		log:          log,
-		stop:         make(chan struct{}),
+func (w *FileWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error {
+	v, ok := cfg.(*config.FileWatcherConfig)
+	if !ok {
+		return fmt.Errorf("invalid config for file watcher")
 	}
 
-	return w, nil
+	w.Path = v.Path
+	w.PollInterval = time.Duration(v.PollSeconds) * time.Second
+	w.lastValue = time.Now()
+	w.log = log
+	w.stop = make(chan struct{})
+
+	return nil
 }
 
 // Watch watches the file for changes and sends the path to the changes channel

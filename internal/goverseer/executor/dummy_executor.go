@@ -13,13 +13,7 @@ var (
 )
 
 func init() {
-	factory.Register("dummy", func(cfg interface{}, log *slog.Logger) (Executor, error) {
-		_, ok := cfg.(config.DummyExecutorConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid config for dummy executor")
-		}
-		return NewDummyExecutor(log), nil
-	})
+	RegisterExecutor("dummy", func() Executor { return &DummyExecutor{} })
 }
 
 // DummyExecutor logs the data to stdout
@@ -28,12 +22,15 @@ type DummyExecutor struct {
 	log *slog.Logger
 }
 
-// NewDummyExecutor creates a new DummyExecutor
-// The log is the logger
-func NewDummyExecutor(log *slog.Logger) *DummyExecutor {
-	return &DummyExecutor{
-		log: log,
+func (e *DummyExecutor) Create(cfg config.ExecutorConfig, log *slog.Logger) error {
+	_, ok := cfg.(*config.DummyExecutorConfig)
+	if !ok {
+		return fmt.Errorf("invalid config for dummy executor")
 	}
+
+	e.log = log
+
+	return nil
 }
 
 // Execute logs the data to stdout

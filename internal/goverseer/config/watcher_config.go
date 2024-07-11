@@ -1,43 +1,82 @@
 package config
 
-import (
-	"gopkg.in/yaml.v3"
+import "fmt"
+
+func init() {
+	RegisterWatcherConfig("dummy", func() WatcherConfig { return &DummyWatcherConfig{} })
+	RegisterWatcherConfig("file", func() WatcherConfig { return &FileWatcherConfig{} })
+	RegisterWatcherConfig("gce", func() WatcherConfig { return &GCEWatcherConfig{} })
+}
+
+// DummyWatcherConfig is the configuration for a GCE watcher
+type DummyWatcherConfig struct {
+	// PollSeconds is the number of seconds to wait between ticks
+	PollSeconds int `yaml:"poll_seconds"`
+}
+
+// ValidateAndSetDefaults validates the GceWatcherConfig and sets default values
+func (cfg *DummyWatcherConfig) ValidateAndSetDefaults() error {
+	if cfg.PollSeconds == 0 {
+		cfg.PollSeconds = 1 // default to 1 second
+	}
+	if cfg.PollSeconds < 1 {
+		return fmt.Errorf("poll_seconds must be greater than or equal to 1")
+	}
+	return nil
+}
+
+// FileWatcherConfig is the configuration for a file watcher
+type FileWatcherConfig struct {
+	Path        string `yaml:"path"`
+	PollSeconds int    `yaml:"poll_seconds"`
+}
+
+// ValidateAndSetDefaults validates the FileWatcherConfig and sets default values
+func (cfg *FileWatcherConfig) ValidateAndSetDefaults() error {
+	if cfg.PollSeconds == 0 {
+		cfg.PollSeconds = 1 // default to 1 second
+	}
+	if cfg.PollSeconds < 1 {
+		return fmt.Errorf("poll_seconds must be greater than or equal to 1")
+	}
+	if cfg.Path == "" {
+		return fmt.Errorf("path is required")
+	}
+	return nil
+}
+
+const (
+	// GCEDefaultMetadataUrl is the default URL for GCE metadata
+	// it can be overridden by setting the metadata_url in the config
+	// this can be useful for testing
+	// e.g. http://localhost:8888/computeMetadata/v1
+	GCEDefaultMetadataUrl = "http://metadata.google.internal/computeMetadata/v1"
+
+	// GCEValidSourceInstance is the instance metadata source
+	GCEValidSourceInstance = "instance"
+
+	// GCEValidSourceProject is the project metadata source
+	GCEValidSourceProject = "project"
 )
 
-var watcherConfigFactory = &ConfigFactory{
-	creators: make(map[string]func([]byte) (interface{}, error)),
+// GCEWatcherConfig is the configuration for a GCE watcher
+type GCEWatcherConfig struct {
+	Source      string `yaml:"source"`
+	Key         string `yaml:"key"`
+	Recursive   bool   `yaml:"recurse,omitempty"`
+	MetadataUrl string `yaml:"metadata_url,omitempty"`
 }
 
-// DynamicWatcherConfig is a dynamic configuration for a watcher
-type DynamicWatcherConfig struct {
-	// Type is the type of watcher
-	Type string `yaml:"type" validate:"required"`
-
-	// Config is the configuration for the watcher
-	// this is dynamic based on the type defined above
-	// See UnmarshalYAML below
-	Config interface{} `yaml:"config" validate:"required"`
-}
-
-// UnmarshalYAML unmarshals the watcher configuration using the dynamic types
-func (dc *DynamicWatcherConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var raw map[string]interface{}
-	if err := unmarshal(&raw); err != nil {
-		return err
+// ValidateAndSetDefaults validates the GCEWatcherConfig and sets default values
+func (cfg *GCEWatcherConfig) ValidateAndSetDefaults() error {
+	if cfg.MetadataUrl == "" {
+		cfg.MetadataUrl = GCEDefaultMetadataUrl
 	}
-
-	dc.Type = raw["type"].(string)
-
-	configData, err := yaml.Marshal(raw["config"])
-	if err != nil {
-		return err
+	if cfg.Source != GCEValidSourceInstance && cfg.Source != GCEValidSourceProject {
+		return fmt.Errorf("source must be one of %s or %s", GCEValidSourceInstance, GCEValidSourceProject)
 	}
-
-	config, err := watcherConfigFactory.Create(dc.Type, configData)
-	if err != nil {
-		return err
+	if cfg.Key == "" {
+		return fmt.Errorf("key is required")
 	}
-	dc.Config = config
-
 	return nil
 }

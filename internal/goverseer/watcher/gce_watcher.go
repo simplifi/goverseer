@@ -18,28 +18,12 @@ var (
 )
 
 func init() {
-	factory.Register("gce", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
-		v, ok := cfg.(config.GceWatcherConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid config for GCE watcher")
-		}
-		return NewGCEWatcher(v.Source, v.Key, v.MetadataUrl, v.Recursive, log)
-	})
+	RegisterWatcher("gce", func() Watcher { return &GCEWatcher{} })
 }
 
 const (
-	// DefaultBaseMetadataUrl is the default URL for GCE metadata
-	// it can be overridden by setting the metadata_url in the config
-	// this can be useful for testing
-	// e.g. http://localhost:8888/computeMetadata/v1
-	DefaultBaseMetadataUrl = "http://metadata.google.internal/computeMetadata/v1"
-
-	// MetadataSourceInstance is the instance metadata source
-	MetadataSourceInstance = "instance"
-
-	// MetadataSourceProject is the project metadata source
-	MetadataSourceProject = "project"
-
+	// metadataErrWait is the time to wait before trying a failed metadata request
+	// again, this prevents hammering the metadata server
 	metadataErrWait = 1 * time.Second
 )
 
@@ -68,34 +52,23 @@ type GCEWatcher struct {
 	cancel context.CancelFunc
 }
 
-// NewGCEWatcher creates a new GCEWatcher
-// Source must be either 'instance' or 'project'
-// Key is the key to watch in the GCE metadata
-// BaseMetadataUrl is the URL to the GCE metadata server
-// Recursive is whether to recurse the metadata keys
-func NewGCEWatcher(Source, Key, BaseMetadataUrl string, Recursive bool, log *slog.Logger) (*GCEWatcher, error) {
-	// Check that Source is either 'instance' or 'project'
-	if Source != MetadataSourceInstance && Source != MetadataSourceProject {
-		return nil, fmt.Errorf("source must be either 'instance' or 'project'")
-	}
-
-	// Set default MetadataUrl if not provided
-	if BaseMetadataUrl == "" {
-		BaseMetadataUrl = DefaultBaseMetadataUrl
+func (w *GCEWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error {
+	v, ok := cfg.(*config.GCEWatcherConfig)
+	if !ok {
+		return fmt.Errorf("invalid config for dummy watcher")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	w := &GCEWatcher{
-		Key:         Key,
-		MetadataUrl: fmt.Sprintf("%s/%s/attributes", BaseMetadataUrl, Source),
-		Recursive:   Recursive,
-		lastETag:    "",
-		log:         log,
-		ctx:         ctx,
-		cancel:      cancel,
-	}
-	return w, nil
+	w.Key = v.Key
+	w.MetadataUrl = fmt.Sprintf("%s/%s/attributes", v.MetadataUrl, v.Source)
+	w.Recursive = v.Recursive
+	w.lastETag = ""
+	w.log = log
+	w.ctx = ctx
+	w.cancel = cancel
+
+	return nil
 }
 
 type gceMetadataResponse struct {

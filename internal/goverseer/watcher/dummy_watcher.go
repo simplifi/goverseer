@@ -14,13 +14,7 @@ var (
 )
 
 func init() {
-	factory.Register("dummy", func(cfg interface{}, log *slog.Logger) (Watcher, error) {
-		v, ok := cfg.(config.DummyWatcherConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid config for dummy watcher")
-		}
-		return NewDummyWatcher(v.PollSeconds, log)
-	})
+	RegisterWatcher("dummy", func() Watcher { return &DummyWatcher{} })
 }
 
 // DummyWatcher is a dummy watcher that ticks at a regular interval, not
@@ -36,17 +30,17 @@ type DummyWatcher struct {
 	stop chan struct{}
 }
 
-// NewDummyWatcher creates a new DummyWatcher
-// PollSeconds is the number of seconds to wait between ticks
-// log is the logger
-func NewDummyWatcher(PollSeconds int, log *slog.Logger) (*DummyWatcher, error) {
-	w := &DummyWatcher{
-		PollInterval: time.Duration(PollSeconds) * time.Second,
-		log:          log,
-		stop:         make(chan struct{}),
+func (w *DummyWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error {
+	v, ok := cfg.(*config.DummyWatcherConfig)
+	if !ok {
+		return fmt.Errorf("invalid config for dummy watcher, got %T", cfg)
 	}
 
-	return w, nil
+	w.PollInterval = time.Duration(v.PollSeconds) * time.Second
+	w.log = log
+	w.stop = make(chan struct{})
+
+	return nil
 }
 
 // Watch watches the file for changes and sends the path to the changes channel

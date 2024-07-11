@@ -19,13 +19,7 @@ var (
 )
 
 func init() {
-	factory.Register("command", func(cfg interface{}, log *slog.Logger) (Executor, error) {
-		v, ok := cfg.(config.CommandExecutorConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid config for command executor")
-		}
-		return NewCommandExecutor(v.Command, log), nil
-	})
+	RegisterExecutor("command", func() Executor { return &CommandExecutor{} })
 }
 
 // CommandExecutor logs the data to stdout
@@ -40,6 +34,19 @@ type CommandExecutor struct {
 	stop chan struct{}
 }
 
+func (e *CommandExecutor) Create(cfg config.ExecutorConfig, log *slog.Logger) error {
+	c, ok := cfg.(*config.CommandExecutorConfig)
+	if !ok {
+		return fmt.Errorf("invalid config for command executor")
+	}
+
+	e.log = log
+	e.Command = c.Command
+	e.stop = make(chan struct{})
+
+	return nil
+}
+
 // NewCommandExecutor creates a new CommandExecutor
 // The command is the command to execute
 // The log is the logger
@@ -52,14 +59,14 @@ func NewCommandExecutor(Command string, log *slog.Logger) *CommandExecutor {
 }
 
 // streamOutput streams the output of the pipe to the logger
-func (e *CommandExecutor) streamOutput(name string, pipe io.ReadCloser) {
+func (e *CommandExecutor) streamOutput(pipe io.ReadCloser) {
 	go func() {
 		scanner := bufio.NewScanner(pipe)
 		for scanner.Scan() {
-			e.log.Info("command output", slog.String(name, scanner.Text()))
+			e.log.Info("command output", slog.String("output", scanner.Text()))
 		}
 		if err := scanner.Err(); err != nil {
-			e.log.Error(fmt.Sprintf("error reading %s", name), tint.Err(err))
+			e.log.Error("error reading output", tint.Err(err))
 		}
 	}()
 }
@@ -86,36 +93,33 @@ func (e *CommandExecutor) Execute(data interface{}) error {
 
 	e.log.Info("starting executor")
 
+	// Cache the data to a temporary file so it can be accessed by the command
 	cache, err := e.cacheData(data)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(cache)
 
+	// TODO: Maybe we don't want to assume bash here?
+	// Maybe we don't even want to assume a shell?
 	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", e.Command)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GOVERSEER_DATA=%s", cache))
 
-	// TODO: Figure out how to merge these two pipes so we don't have to
-	// do everything twice.
-	stdout, err := cmd.StdoutPipe()
+	// Combine stdout and stderr
+	combinedOutput, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	defer stdout.Close()
+	defer combinedOutput.Close()
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	defer stderr.Close()
+	cmd.Stderr = cmd.Stdout
 
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	// Stream stdout and stderr to the logger
-	e.streamOutput("stdout", stdout)
-	e.streamOutput("stderr", stderr)
+	// Stream combined output to the logger
+	e.streamOutput(combinedOutput)
 
 	// Wait for the command to finish running, but don't block otherwise we'll
 	// never be able to stop the executor if the command hangs

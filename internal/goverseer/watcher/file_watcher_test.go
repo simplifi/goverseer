@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,23 +36,29 @@ func touchFile(t *testing.T, filename string) {
 
 func TestFileWatcher_Watch(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
+
 	// Create a temp file we can watch
 	testFilePath := filepath.Join(t.TempDir(), "test.txt")
 	touchFile(t, testFilePath)
+	cfg := &config.FileWatcherConfig{
+		Path: testFilePath,
+	}
+	cfg.ValidateAndSetDefaults()
 
 	// Create a channel to receive file changes
 	changes := make(chan interface{})
 	wg := &sync.WaitGroup{}
 
 	// Create a new FileWatcher
-	fileWatcher, err := NewFileWatcher(testFilePath, 1, log)
+	watcher := FileWatcher{}
+	err := watcher.Create(cfg, log)
 	assert.NoError(t, err)
 
 	// Start watching the file
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fileWatcher.Watch(changes)
+		watcher.Watch(changes)
 	}()
 
 	// Touch the file to trigger a change
@@ -67,18 +74,6 @@ func TestFileWatcher_Watch(t *testing.T) {
 	}
 
 	// Stop the watcher
-	fileWatcher.Stop()
+	watcher.Stop()
 	wg.Wait()
-}
-
-func TestNewFileWatcher(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-
-	path := "/path/to/file.txt"
-	pollSeconds := 1
-	watcher, err := NewFileWatcher(path, pollSeconds, log)
-	assert.NoError(t, err)
-	assert.NotNil(t, watcher)
-	assert.Equal(t, path, watcher.Path)
-	assert.Equal(t, time.Duration(pollSeconds)*time.Second, watcher.PollInterval)
 }

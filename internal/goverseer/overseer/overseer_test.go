@@ -15,17 +15,18 @@ func TestOverseer(t *testing.T) {
 		Name: "TestManager",
 		Watcher: config.DynamicWatcherConfig{
 			Type: "dummy",
-			Config: config.DummyWatcherConfig{
+			Config: &config.DummyWatcherConfig{
 				PollSeconds: 1,
 			},
 		},
 		Executor: config.DynamicExecutorConfig{
 			Type:   "dummy",
-			Config: config.DummyExecutorConfig{},
+			Config: &config.DummyExecutorConfig{},
 		},
 	}
+	cfg.ValidateAndSetDefaults()
 
-	overseer, err := NewOverseer(cfg, stop)
+	overseer, err := New(cfg, stop)
 	if err != nil {
 		t.Fatalf("Failed to create Overseer: %v", err)
 	}

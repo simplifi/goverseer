@@ -8,33 +8,41 @@ import (
 )
 
 func TestNewExecutor_DummyExecutor(t *testing.T) {
-	executorConfig := config.DummyExecutorConfig{}
 	cfg := &config.Config{
 		Executor: config.DynamicExecutorConfig{
 			Type:   "dummy",
-			Config: executorConfig,
+			Config: &config.DummyExecutorConfig{},
+		},
+		Watcher: config.DynamicWatcherConfig{
+			Type:   "dummy",
+			Config: &config.DummyWatcherConfig{},
 		},
 	}
+	cfg.ValidateAndSetDefaults()
 
-	watcher, err := NewExecutor(cfg)
+	executor, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &DummyExecutor{}, watcher)
+	assert.IsType(t, &DummyExecutor{}, *executor)
 }
 
 func TestNewExecutor_CommandExecutor(t *testing.T) {
-	executorConfig := config.CommandExecutorConfig{
-		Command: "echo 'Hello, World!'",
-	}
 	cfg := &config.Config{
 		Executor: config.DynamicExecutorConfig{
-			Type:   "command",
-			Config: executorConfig,
+			Type: "command",
+			Config: &config.CommandExecutorConfig{
+				Command: "echo 'Hello, World!'",
+			},
+		},
+		Watcher: config.DynamicWatcherConfig{
+			Type:   "dummy",
+			Config: &config.DummyWatcherConfig{},
 		},
 	}
+	cfg.ValidateAndSetDefaults()
 
-	watcher, err := NewExecutor(cfg)
+	executor, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &CommandExecutor{}, watcher)
+	assert.IsType(t, &CommandExecutor{}, *executor)
 }
 
 func TestNewExecutor_Unknown(t *testing.T) {
@@ -42,8 +50,12 @@ func TestNewExecutor_Unknown(t *testing.T) {
 		Executor: config.DynamicExecutorConfig{
 			Type: "foo",
 		},
+		Watcher: config.DynamicWatcherConfig{
+			Type:   "dummy",
+			Config: &config.DummyWatcherConfig{},
+		},
 	}
 
-	_, err := NewExecutor(cfg)
+	_, err := New(cfg)
 	assert.Error(t, err, "should throw an error for unknown executor type")
 }

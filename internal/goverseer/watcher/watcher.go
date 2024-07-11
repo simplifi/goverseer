@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"sync"
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
@@ -13,42 +12,38 @@ import (
 // Watcher is an interface for watching for changes
 type Watcher interface {
 	Watch(changes chan interface{})
+	Create(cfg config.WatcherConfig, log *slog.Logger) error
 	Stop()
 }
 
-type WatcherFactory struct {
-	mu       sync.RWMutex
-	creators map[string]func(interface{}, *slog.Logger) (Watcher, error)
+type WatcherFactory func() Watcher
+
+// WatcherRegistry is a global registry for watcher factories
+var WatcherRegistry = make(map[string]WatcherFactory)
+
+// RegisterWatcher registers a watcher factory with the global registry
+func RegisterWatcher(watcherType string, factory WatcherFactory) {
+	WatcherRegistry[watcherType] = factory
 }
 
-var factory = &WatcherFactory{
-	creators: make(map[string]func(interface{}, *slog.Logger) (Watcher, error)),
-}
-
-func (f *WatcherFactory) Register(watcherType string, creator func(interface{}, *slog.Logger) (Watcher, error)) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.creators[watcherType] = creator
-}
-
-func (f *WatcherFactory) Create(watcherType string, cfg interface{}, log *slog.Logger) (Watcher, error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	creator, exists := f.creators[watcherType]
-	if !exists {
-		return nil, fmt.Errorf("unknown watcher type: %s", watcherType)
-	}
-	return creator(cfg, log)
-}
-
-// NewWatcher creates a new Watcher based on the config
+// New creates a new Watcher based on the config
 // The config is the watcher configuration
-func NewWatcher(cfg *config.Config) (Watcher, error) {
+func New(cfg *config.Config) (*Watcher, error) {
 	// Setup the logger
 	log := slog.
 		New(tint.NewHandler(os.Stdout, nil)).
 		With("overseer", cfg.Name).
 		With("watcher", cfg.Watcher.Type)
 
-	return factory.Create(cfg.Watcher.Type, cfg.Watcher.Config, log)
+	// Get the registered factory function
+	factory, found := WatcherRegistry[cfg.Watcher.Type]
+	if !found {
+		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
+	}
+
+	// Create an instance of the executor using the factory function
+	exec := factory()
+	err := exec.Create(cfg.Watcher.Config, log)
+
+	return &exec, err
 }

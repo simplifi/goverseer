@@ -3,96 +3,78 @@ package config
 import (
 	"testing"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
 )
 
-func TestDummyWatcherConfig(t *testing.T) {
-	validate := validator.New(validator.WithRequiredStructEnabled())
+func TestDummyWatcherConfig_ValidateAndSetDefaults(t *testing.T) {
+	config := &DummyWatcherConfig{
+		PollSeconds: 10,
+	}
 
-	// Valid command executor configuration
-	yamlDataValid := []byte(`
-type: dummy
-config:
-  poll_seconds: 100
-`)
-	var dynamicConfigValid DynamicWatcherConfig
-	err := yaml.Unmarshal(yamlDataValid, &dynamicConfigValid)
+	// Valid config should not return an error
+	err := config.ValidateAndSetDefaults()
 	assert.NoError(t, err)
 
-	err = validate.Struct(dynamicConfigValid)
-	assert.NoError(t, err)
-	assert.Equal(t, "dummy", dynamicConfigValid.Type)
-	assert.Equal(t, DummyWatcherConfig{PollSeconds: 100}, dynamicConfigValid.Config)
+	// Invalid configuration, PollSeconds less than 0
+	config.PollSeconds = -1
+	err = config.ValidateAndSetDefaults()
+	assert.Error(t, err)
 
-	// Invalid command executor configuration
-	yamlDataInvalid := []byte(`
-type: dummy
-config: {}
-`)
-	var dynamicConfigInvalid DynamicWatcherConfig
-	yaml.Unmarshal(yamlDataInvalid, &dynamicConfigInvalid)
-	err = validate.Struct(dynamicConfigInvalid)
+	// Check defaults are set, PollSeconds missing (0) so it should get the default
+	config.PollSeconds = 0
+	err = config.ValidateAndSetDefaults()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, config.PollSeconds)
+}
+
+func TestFileWatcherConfig_ValidateAndSetDefaults(t *testing.T) {
+	config := &FileWatcherConfig{
+		Path:        "/",
+		PollSeconds: 10,
+	}
+
+	// Valid config should not return an error
+	err := config.ValidateAndSetDefaults()
+	assert.NoError(t, err)
+
+	// Invalid configuration, PollSeconds less than 0
+	config.PollSeconds = -1
+	err = config.ValidateAndSetDefaults()
+	assert.Error(t, err)
+
+	// Check defaults are set, PollSeconds missing (0) so it should get the default
+	config.PollSeconds = 0
+	err = config.ValidateAndSetDefaults()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, config.PollSeconds)
+
+	// Path missing ("") so it should error
+	config.PollSeconds = 0
+	config.Path = ""
+	err = config.ValidateAndSetDefaults()
 	assert.Error(t, err)
 }
 
-func TestFileWatcherConfig(t *testing.T) {
-	validate := validator.New(validator.WithRequiredStructEnabled())
+func TestGceWatcherConfig_ValidateAndSetDefaults(t *testing.T) {
+	config := &GCEWatcherConfig{
+		Source:      "instance",
+		Key:         "node-json",
+		Recursive:   true,
+		MetadataUrl: "http://metadata.google.internal/computeMetadata/v1/",
+	}
 
-	// Valid command executor configuration
-	yamlDataValid := []byte(`
-type: file
-config:
-  path: /tmp/foo/bar
-  poll_seconds: 5
-`)
-	var dynamicConfigValid DynamicWatcherConfig
-	err := yaml.Unmarshal(yamlDataValid, &dynamicConfigValid)
+	// Valid config should not return an error
+	err := config.ValidateAndSetDefaults()
 	assert.NoError(t, err)
 
-	err = validate.Struct(dynamicConfigValid)
-	assert.NoError(t, err)
-	assert.Equal(t, "file", dynamicConfigValid.Type)
-	assert.Equal(t, FileWatcherConfig{Path: "/tmp/foo/bar", PollSeconds: 5}, dynamicConfigValid.Config)
-
-	// Invalid command executor configuration
-	yamlDataInvalid := []byte(`
-type: file
-config: {}
-`)
-	var dynamicConfigInvalid DynamicExecutorConfig
-	yaml.Unmarshal(yamlDataInvalid, &dynamicConfigInvalid)
-	err = validate.Struct(dynamicConfigInvalid)
+	// Invalid configuration, Source not valid
+	config.Source = "foobar"
+	err = config.ValidateAndSetDefaults()
 	assert.Error(t, err)
-}
 
-func TestGceWatcherConfig(t *testing.T) {
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	// Valid command executor configuration
-	yamlDataValid := []byte(`
-type: gce
-config:
-  source: instance
-  key: my-key
-`)
-	var dynamicConfigValid DynamicWatcherConfig
-	err := yaml.Unmarshal(yamlDataValid, &dynamicConfigValid)
-	assert.NoError(t, err)
-
-	err = validate.Struct(dynamicConfigValid)
-	assert.NoError(t, err)
-	assert.Equal(t, "gce", dynamicConfigValid.Type)
-	assert.Equal(t, GceWatcherConfig{Source: "instance", Key: "my-key"}, dynamicConfigValid.Config)
-
-	// Invalid command executor configuration
-	yamlDataInvalid := []byte(`
-type: gce
-config: {}
-`)
-	var dynamicConfigInvalid DynamicExecutorConfig
-	yaml.Unmarshal(yamlDataInvalid, &dynamicConfigInvalid)
-	err = validate.Struct(dynamicConfigInvalid)
+	// Invalid configuration, Key missing
+	config.Source = "instance"
+	config.Key = ""
+	err = config.ValidateAndSetDefaults()
 	assert.Error(t, err)
 }

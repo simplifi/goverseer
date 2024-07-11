@@ -43,35 +43,15 @@ func loadConfigs() []*config.Config {
 	return cfgs
 }
 
-// validateConfigs validates the configuration files
-func validateConfigs(cfgs []*config.Config) {
-	var errors []error
-
-	for _, cfg := range cfgs {
-		if err := cfg.Validate(); err != nil {
-			errors = append(errors, err)
-		}
-	}
-
-	if len(errors) > 0 {
-		log.Printf("validation errors found in %d configuration(s):\n", len(errors))
-		for _, err := range errors {
-			log.Printf("- %s\n", err.Error())
-		}
-		log.Fatalf("\nexiting due to validation errors")
-	}
-}
-
 // start starts the goverseer service
 func start() {
 	wg := sync.WaitGroup{}
 	stop := make(chan struct{})
 
 	cfgs := loadConfigs()
-	validateConfigs(cfgs)
 
 	for _, cfg := range cfgs {
-		overseer, err := overseer.NewOverseer(cfg, stop)
+		overseer, err := overseer.New(cfg, stop)
 		if err != nil {
 			log.Fatalf("overseer run error: %v", err)
 		}

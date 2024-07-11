@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,14 +27,24 @@ func TestGCEWatcher_Watch(t *testing.T) {
 	}))
 	defer mockServer.Close()
 
-	w, _ := NewGCEWatcher("instance", "test-key", mockServer.URL, true, log)
+	cfg := &config.GCEWatcherConfig{
+		Source:      "instance",
+		Key:         "test-key",
+		MetadataUrl: mockServer.URL,
+		Recursive:   true,
+	}
+	cfg.ValidateAndSetDefaults()
+
+	watcher := GCEWatcher{}
+	err := watcher.Create(cfg, log)
+	assert.NoError(t, err)
 
 	changes := make(chan interface{})
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		w.Watch(changes)
+		watcher.Watch(changes)
 	}()
 
 	// Simulate a change by closing the mock response channel, which will unblock
@@ -49,21 +60,6 @@ func TestGCEWatcher_Watch(t *testing.T) {
 	}
 
 	// Stop the watcher and wait
-	w.Stop()
+	watcher.Stop()
 	wg.Wait()
-}
-
-func TestNewGCEWatcher(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-
-	// Test with valid source
-	w, err := NewGCEWatcher("instance", "test-key", "", true, log)
-	assert.NoError(t, err)
-	assert.NotNil(t, w)
-
-	// Test with invalid source
-	w, err = NewGCEWatcher("invalid-source", "test-key", "", true, log)
-	assert.Error(t, err)
-	assert.Nil(t, w)
-	assert.EqualError(t, err, "source must be either 'instance' or 'project'")
 }
