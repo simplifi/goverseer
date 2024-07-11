@@ -15,7 +15,7 @@ name: WatcherToDummy
 watcher:
   file:
     path: /tmp/test1
-executor:
+executioner:
   dummy:
 `
 	testConfigGceToCommand = `
@@ -24,7 +24,7 @@ watcher:
   gce:
     source: instance
     key: foo
-executor:
+executioner:
   command:
     command: echo "Hello, World!"
 `
@@ -75,9 +75,9 @@ func TestFromFile(t *testing.T) {
 	assert.Equal(t, "dummy", config.Watcher.Type)
 	assert.IsType(t, &DummyWatcherConfig{}, config.Watcher.Config)
 
-	// Check the executor config
-	assert.Equal(t, "dummy", config.Executor.Type)
-	assert.IsType(t, &DummyExecutorConfig{}, config.Executor.Config)
+	// Check the executioner config
+	assert.Equal(t, "dummy", config.Executioner.Type)
+	assert.IsType(t, &DummyExecutionerConfig{}, config.Executioner.Config)
 }
 
 func TestValidateAndSetDefaults(t *testing.T) {
@@ -88,9 +88,9 @@ func TestValidateAndSetDefaults(t *testing.T) {
 			Type:   "dummy",
 			Config: &DummyWatcherConfig{},
 		},
-		Executor: DynamicExecutorConfig{
+		Executioner: DynamicExecutionerConfig{
 			Type:   "dummy",
-			Config: &DummyExecutorConfig{},
+			Config: &DummyExecutionerConfig{},
 		},
 		ChangeBuffer: 10,
 	}

@@ -6,46 +6,46 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ExecutorConfig is the interface that all executor configurations should implement
-type ExecutorConfig interface {
+// ExecutionerConfig is the interface that all executioner configurations should implement
+type ExecutionerConfig interface {
 	ValidateAndSetDefaults() error
 }
 
-// ExecutorConfigFactory is a function that creates a new instance of a executor config
-type ExecutorConfigFactory func() ExecutorConfig
+// ExecutionerConfigFactory is a function that creates a new instance of a executioner config
+type ExecutionerConfigFactory func() ExecutionerConfig
 
-// ExecutorConfigRegistry is a global registry for executor config factories
-var ExecutorConfigRegistry = make(map[string]ExecutorConfigFactory)
+// ExecutionerConfigRegistry is a global registry for executioner config factories
+var ExecutionerConfigRegistry = make(map[string]ExecutionerConfigFactory)
 
-// RegisterExecutorConfig registers a executor config factory with the global registry
-func RegisterExecutorConfig(executorType string, factory ExecutorConfigFactory) {
-	ExecutorConfigRegistry[executorType] = factory
+// RegisterExecutionerConfig registers a executioner config factory with the global registry
+func RegisterExecutionerConfig(executionerType string, factory ExecutionerConfigFactory) {
+	ExecutionerConfigRegistry[executionerType] = factory
 }
 
-// DynamicExecutorConfig is a custom type that handles dynamic unmarshalling
-type DynamicExecutorConfig struct {
+// DynamicExecutionerConfig is a custom type that handles dynamic unmarshalling
+type DynamicExecutionerConfig struct {
 	Type   string
-	Config ExecutorConfig
+	Config ExecutionerConfig
 }
 
-// UnmarshalYAML implements the yaml.Unmarshaler interface for Executor
-func (w *DynamicExecutorConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+// UnmarshalYAML implements the yaml.Unmarshaler interface for Executioner
+func (w *DynamicExecutionerConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw map[string]interface{}
 	if err := unmarshal(&raw); err != nil {
 		return err
 	}
 
 	if len(raw) != 1 {
-		return fmt.Errorf("invalid executor configuration")
+		return fmt.Errorf("invalid executioner configuration")
 	}
 
 	for key, value := range raw {
 		w.Type = key
 
 		// Get the registered factory function
-		factory, found := ExecutorConfigRegistry[key]
+		factory, found := ExecutionerConfigRegistry[key]
 		if !found {
-			return fmt.Errorf("unknown executor type: %s", key)
+			return fmt.Errorf("unknown executioner type: %s", key)
 		}
 
 		// Create an instance of the config using the factory function
@@ -67,7 +67,7 @@ func (w *DynamicExecutorConfig) UnmarshalYAML(unmarshal func(interface{}) error)
 	return nil
 }
 
-// ValidateAndSetDefaults validates the Executor configuration and sets default values
-func (w *DynamicExecutorConfig) ValidateAndSetDefaults() error {
+// ValidateAndSetDefaults validates the Executioner configuration and sets default values
+func (w *DynamicExecutionerConfig) ValidateAndSetDefaults() error {
 	return w.Config.ValidateAndSetDefaults()
 }

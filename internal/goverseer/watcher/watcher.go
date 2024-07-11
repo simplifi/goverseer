@@ -41,7 +41,7 @@ func New(cfg *config.Config) (*Watcher, error) {
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}
 
-	// Create an instance of the executor using the factory function
+	// Create an instance of the executioner using the factory function
 	exec := factory()
 	err := exec.Create(cfg.Watcher.Config, log)
 

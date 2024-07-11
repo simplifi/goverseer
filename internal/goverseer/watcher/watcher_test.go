@@ -15,9 +15,9 @@ func TestNewWatcher_DummyWatcher(t *testing.T) {
 				PollSeconds: 100,
 			},
 		},
-		Executor: config.DynamicExecutorConfig{
+		Executioner: config.DynamicExecutionerConfig{
 			Type:   "dummy",
-			Config: &config.DummyExecutorConfig{},
+			Config: &config.DummyExecutionerConfig{},
 		},
 	}
 	cfg.ValidateAndSetDefaults()
@@ -32,9 +32,9 @@ func TestNewWatcher_Unknown(t *testing.T) {
 		Watcher: config.DynamicWatcherConfig{
 			Type: "foo",
 		},
-		Executor: config.DynamicExecutorConfig{
+		Executioner: config.DynamicExecutionerConfig{
 			Type:   "dummy",
-			Config: &config.DummyExecutorConfig{},
+			Config: &config.DummyExecutionerConfig{},
 		},
 	}
 

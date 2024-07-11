@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDummyExecutorConfig_ValidateAndSetDefaults(t *testing.T) {
-	cfg := &DummyExecutorConfig{}
+func TestDummyExecutionerConfig_ValidateAndSetDefaults(t *testing.T) {
+	cfg := &DummyExecutionerConfig{}
 
 	// Valid config should not return an error
 	err := cfg.ValidateAndSetDefaults()

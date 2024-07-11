@@ -5,18 +5,18 @@ when a change is detected. In some ways it is similar to consul-template, execpt
 Goverseer does not handle templating. Instead it is focused on watching for
 changes and taking some kind of action based on those changes.
 
-## Supported Watchers & Executors
+## Supported Watchers & Executioners
 
 Overseer currently supports:
 
 * Dummy Watcher
-* Dummy Executor
+* Dummy Executioner
 
 Planned future support includes:
 
 * GCE Metadata Watcher
 * Consul Watcher
-* Command Executor
+* Command Executioner
 
 ## Building
 

@@ -19,9 +19,9 @@ func TestOverseer(t *testing.T) {
 				PollSeconds: 1,
 			},
 		},
-		Executor: config.DynamicExecutorConfig{
+		Executioner: config.DynamicExecutionerConfig{
 			Type:   "dummy",
-			Config: &config.DummyExecutorConfig{},
+			Config: &config.DummyExecutionerConfig{},
 		},
 	}
 	cfg.ValidateAndSetDefaults()

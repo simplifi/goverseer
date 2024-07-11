@@ -7,14 +7,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestDynamicExecutorConfig_UnmarshalYAML(t *testing.T) {
+func TestDynamicExecutionerConfig_UnmarshalYAML(t *testing.T) {
 	// Unmarshalling a valid config should not return an error
 	yamlConfigSnippet := []byte(`
 dummy:
 `)
-	var cfg DynamicExecutorConfig
+	var cfg DynamicExecutionerConfig
 	err := yaml.Unmarshal(yamlConfigSnippet, &cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, "dummy", cfg.Type)
-	assert.IsType(t, &DummyExecutorConfig{}, cfg.Config)
+	assert.IsType(t, &DummyExecutionerConfig{}, cfg.Config)
 }

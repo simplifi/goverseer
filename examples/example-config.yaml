@@ -5,7 +5,7 @@ watcher:
   dummy:
     poll_seconds: 1
 
-executor:
+executioner:
   dummy:
 
 

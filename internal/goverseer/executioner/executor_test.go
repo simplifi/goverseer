@@ -1,4 +1,4 @@
-package executor
+package executioner
 
 import (
 	"testing"
@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewExecutor_DummyExecutor(t *testing.T) {
+func TestNewExecutioner_DummyExecutioner(t *testing.T) {
 	cfg := &config.Config{
-		Executor: config.DynamicExecutorConfig{
+		Executioner: config.DynamicExecutionerConfig{
 			Type:   "dummy",
-			Config: &config.DummyExecutorConfig{},
+			Config: &config.DummyExecutionerConfig{},
 		},
 		Watcher: config.DynamicWatcherConfig{
 			Type:   "dummy",
@@ -20,14 +20,14 @@ func TestNewExecutor_DummyExecutor(t *testing.T) {
 	}
 	cfg.ValidateAndSetDefaults()
 
-	executor, err := New(cfg)
+	executioner, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &DummyExecutor{}, *executor)
+	assert.IsType(t, &DummyExecutioner{}, *executioner)
 }
 
-func TestNewExecutor_Unknown(t *testing.T) {
+func TestNewExecutioner_Unknown(t *testing.T) {
 	cfg := &config.Config{
-		Executor: config.DynamicExecutorConfig{
+		Executioner: config.DynamicExecutionerConfig{
 			Type: "foo",
 		},
 		Watcher: config.DynamicWatcherConfig{
@@ -37,5 +37,5 @@ func TestNewExecutor_Unknown(t *testing.T) {
 	}
 
 	_, err := New(cfg)
-	assert.Error(t, err, "should throw an error for unknown executor type")
+	assert.Error(t, err, "should throw an error for unknown executioner type")
 }

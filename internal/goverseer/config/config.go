@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config is the configuration for a watcher and executor
+// Config is the configuration for a watcher and executioner
 type Config struct {
 	// Name is the name of the configuration, this will show up in logs
 	Name string `yaml:"name"`
@@ -18,9 +18,9 @@ type Config struct {
 	// it is dynamic because the configuration can be different for each watcher
 	Watcher DynamicWatcherConfig `yaml:"watcher"`
 
-	// Executor is the configuration for the executor
-	// it is dynamic because the configuration can be different for each executor
-	Executor DynamicExecutorConfig `yaml:"executor"`
+	// Executioner is the configuration for the executioner
+	// it is dynamic because the configuration can be different for each executioner
+	Executioner DynamicExecutionerConfig `yaml:"executioner"`
 
 	// ChangeBuffer is the number of changes to buffer in the overseer's queue
 	ChangeBuffer int `yaml:"change_buffer,omitempty"`
@@ -39,7 +39,7 @@ func (cfg *Config) ValidateAndSetDefaults() error {
 		return err
 	}
 
-	if err := cfg.Executor.ValidateAndSetDefaults(); err != nil {
+	if err := cfg.Executioner.ValidateAndSetDefaults(); err != nil {
 		return err
 	}
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
-	"github.com/simplifi/goverseer/internal/goverseer/executor"
+	"github.com/simplifi/goverseer/internal/goverseer/executioner"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher"
 )
 
@@ -22,13 +22,13 @@ type Overseer struct {
 	// watcher is the watcher
 	watcher watcher.Watcher
 
-	// executor is the executor
-	executor executor.Executor
+	// executioner is the executioner
+	executioner executioner.Executioner
 
 	// log is the logger
 	log *slog.Logger
 
-	// changes is the channel through which we send changes from the watcher to the executor
+	// changes is the channel through which we send changes from the watcher to the executioner
 	changes chan interface{}
 
 	// stop is a channel to signal the overseer to stop
@@ -55,17 +55,17 @@ func New(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
 		return nil, err
 	}
 
-	executor, err := executor.New(cfg)
+	executioner, err := executioner.New(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	o := &Overseer{
-		watcher:  *watcher,
-		executor: *executor,
-		log:      log,
-		changes:  changes,
-		stop:     stop,
+		watcher:     *watcher,
+		executioner: *executioner,
+		log:         log,
+		changes:     changes,
+		stop:        stop,
 	}
 
 	return o, nil
@@ -89,8 +89,8 @@ func (o *Overseer) Run() {
 			o.wg.Add(1)
 			go func() {
 				defer o.wg.Done()
-				if err := o.executor.Execute(data); err != nil {
-					o.log.Error("error running executor", tint.Err(err))
+				if err := o.executioner.Execute(data); err != nil {
+					o.log.Error("error running executioner", tint.Err(err))
 				}
 			}()
 		}
@@ -101,10 +101,10 @@ func (o *Overseer) Run() {
 func (o *Overseer) Stop() {
 	o.log.Info("shutting down overseer")
 	o.watcher.Stop()
-	o.executor.Stop()
+	o.executioner.Stop()
 
 	o.log.Info("waiting for overseer to finish")
-	// Wait here so we don't close the changes channel before the executor is done
+	// Wait here so we don't close the changes channel before the executioner is done
 	o.wg.Wait()
 	o.log.Info("done")
 	close(o.changes)
