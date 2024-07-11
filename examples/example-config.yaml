@@ -1,0 +1,11 @@
+---
+name: dummy example
+
+watcher:
+  dummy:
+    poll_seconds: 1
+
+executor:
+  dummy:
+
+
