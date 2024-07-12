@@ -1,7 +1,7 @@
 # Goverseer
 
 Goverseer is a tool for monitoring some kind of upstream, and taking actions
-when a change is detected. In some ways it is similar to consul-template, execpt
+when a change is detected. In some ways it is similar to consul-template, except
 Goverseer does not handle templating. Instead it is focused on watching for
 changes and taking some kind of action based on those changes.
 
