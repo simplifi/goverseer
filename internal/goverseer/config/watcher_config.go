@@ -12,7 +12,7 @@ type DummyWatcherConfig struct {
 	PollSeconds int `yaml:"poll_seconds"`
 }
 
-// ValidateAndSetDefaults validates the GceWatcherConfig and sets default values
+// ValidateAndSetDefaults validates the DummyWatcherConfig and sets default values
 func (cfg *DummyWatcherConfig) ValidateAndSetDefaults() error {
 	if cfg.PollSeconds == 0 {
 		cfg.PollSeconds = 1 // default to 1 second
