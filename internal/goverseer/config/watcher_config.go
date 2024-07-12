@@ -6,7 +6,7 @@ func init() {
 	RegisterWatcherConfig("dummy", func() WatcherConfig { return &DummyWatcherConfig{} })
 }
 
-// DummyWatcherConfig is the configuration for a GCE watcher
+// DummyWatcherConfig is the configuration for a Dummy watcher
 type DummyWatcherConfig struct {
 	// PollSeconds is the number of seconds to wait between ticks
 	PollSeconds int `yaml:"poll_seconds"`
