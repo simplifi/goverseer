@@ -45,7 +45,7 @@ func (w *DummyWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error 
 
 // Watch watches the file for changes and sends the path to the changes channel
 // The changes channel is where the path to the file is sent when it changes
-func (w *DummyWatcher) Watch(changes chan interface{}) {
+func (w *DummyWatcher) Watch(change chan interface{}) {
 	w.log.Info("starting watcher")
 	for {
 		select {
@@ -53,7 +53,7 @@ func (w *DummyWatcher) Watch(changes chan interface{}) {
 			return
 		case value := <-time.After(w.PollInterval):
 			w.log.Info("dummy watcher tick", slog.Time("value", value))
-			changes <- value
+			change <- value
 		}
 	}
 }

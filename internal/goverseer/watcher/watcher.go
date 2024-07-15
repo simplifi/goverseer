@@ -11,7 +11,7 @@ import (
 
 // Watcher is an interface for watching for changes
 type Watcher interface {
-	Watch(changes chan interface{})
+	Watch(change chan interface{})
 	Create(cfg config.WatcherConfig, log *slog.Logger) error
 	Stop()
 }

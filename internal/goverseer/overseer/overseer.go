@@ -11,13 +11,9 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/watcher"
 )
 
-const (
-	// DefaultChangeBuffer is the default size of the change buffer
-	// This is the number of changes that can be buffered before the watcher blocks
-	DefaultChangeBuffer = 100
-)
-
 // Runs a Watcher and listens on channel for change, triggers Action when that happens
+// NOTE: The change channel does not have a buffer, so it will block until the
+// executioner is ready to process the change.
 type Overseer struct {
 	// watcher is the watcher
 	watcher watcher.Watcher
@@ -28,8 +24,8 @@ type Overseer struct {
 	// log is the logger
 	log *slog.Logger
 
-	// changes is the channel through which we send changes from the watcher to the executioner
-	changes chan interface{}
+	// change is the channel through which we send changes from the watcher to the executioner
+	change chan interface{}
 
 	// stop is a channel to signal the overseer to stop
 	stop chan struct{}
@@ -45,11 +41,6 @@ func New(cfg *config.Config) (*Overseer, error) {
 		New(tint.NewHandler(os.Stdout, nil)).
 		With("overseer", cfg.Name)
 
-	if cfg.ChangeBuffer == 0 {
-		cfg.ChangeBuffer = DefaultChangeBuffer
-	}
-	changes := make(chan interface{}, cfg.ChangeBuffer)
-
 	watcher, err := watcher.New(cfg)
 	if err != nil {
 		return nil, err
@@ -64,7 +55,7 @@ func New(cfg *config.Config) (*Overseer, error) {
 		watcher:     *watcher,
 		executioner: *executioner,
 		log:         log,
-		changes:     changes,
+		change:      make(chan interface{}),
 		stop:        make(chan struct{}),
 	}
 
@@ -77,14 +68,14 @@ func (o *Overseer) Run() {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
-		o.watcher.Watch(o.changes)
+		o.watcher.Watch(o.change)
 	}()
 
 	for {
 		select {
 		case <-o.stop:
 			return
-		case data := <-o.changes:
+		case data := <-o.change:
 			o.wg.Add(1)
 			go func() {
 				defer o.wg.Done()
@@ -107,5 +98,5 @@ func (o *Overseer) Stop() {
 	// Wait here so we don't close the changes channel before the executioner is done
 	o.wg.Wait()
 	o.log.Info("done")
-	close(o.changes)
+	close(o.change)
 }

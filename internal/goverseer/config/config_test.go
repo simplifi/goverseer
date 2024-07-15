@@ -70,19 +70,7 @@ func TestValidateAndSetDefaults(t *testing.T) {
 			Type:   "dummy",
 			Config: &DummyExecutionerConfig{},
 		},
-		ChangeBuffer: 10,
 	}
 	err := config.ValidateAndSetDefaults()
 	assert.NoError(t, err)
-
-	// Invalid configuration, ChangeBuffer less than 0
-	config.ChangeBuffer = -1
-	err = config.ValidateAndSetDefaults()
-	assert.Error(t, err)
-
-	// Check defaults are set, ChangeBuffer missing (0) so it should get the default
-	config.ChangeBuffer = 0
-	err = config.ValidateAndSetDefaults()
-	assert.NoError(t, err)
-	assert.Equal(t, 100, config.ChangeBuffer)
 }
