@@ -29,7 +29,7 @@ type DynamicExecutionerConfig struct {
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface for Executioner
-func (w *DynamicExecutionerConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (dec *DynamicExecutionerConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw map[string]interface{}
 	if err := unmarshal(&raw); err != nil {
 		return err
@@ -40,7 +40,7 @@ func (w *DynamicExecutionerConfig) UnmarshalYAML(unmarshal func(interface{}) err
 	}
 
 	for key, value := range raw {
-		w.Type = key
+		dec.Type = key
 
 		// Get the registered factory function
 		factory, found := ExecutionerConfigRegistry[key]
@@ -61,13 +61,13 @@ func (w *DynamicExecutionerConfig) UnmarshalYAML(unmarshal func(interface{}) err
 			return err
 		}
 
-		w.Config = config
+		dec.Config = config
 	}
 
 	return nil
 }
 
 // ValidateAndSetDefaults validates the Executioner configuration and sets default values
-func (w *DynamicExecutionerConfig) ValidateAndSetDefaults() error {
-	return w.Config.ValidateAndSetDefaults()
+func (dec *DynamicExecutionerConfig) ValidateAndSetDefaults() error {
+	return dec.Config.ValidateAndSetDefaults()
 }
