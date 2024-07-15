@@ -25,9 +25,9 @@ should see a binary in the root of your checkout.
 
 ## Development
 
-To run locally during development run `go run ./cmd/goverseer --help`.
+To run locally during development, run `go run ./cmd/goverseer --help`.
 
-To run all tests run `go test -count 1 -v ./...` (the `-count 1` avoids caching
+To run all tests, run `go test -count 1 -v ./...` (the `-count 1` avoids caching
 results.
 
 ### Accessing GCE Metadata Locally
