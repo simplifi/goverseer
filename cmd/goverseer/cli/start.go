@@ -11,30 +11,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	configFile string
-)
-
-var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Start the goverseer service",
-	Run: func(cmd *cobra.Command, args []string) {
-		start()
-	},
-}
-
 func init() {
-	startCmd.Flags().StringVarP(
-		&configFile,
+	startCmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start the goverseer service",
+		Run: func(cmd *cobra.Command, args []string) {
+			if config, err := cmd.Flags().GetString("config"); err != nil {
+				log.Fatalf("error getting config flag: %v", err)
+			} else {
+				start(config)
+			}
+		},
+	}
+
+	startCmd.Flags().StringP(
 		"config",
 		"c",
 		"/etc/goverseer.yaml",
 		"A configuration file for the goverseer service")
+
 	rootCmd.AddCommand(startCmd)
 }
 
 // loadConfig loads the configuration file
-func loadConfig() *config.Config {
+func loadConfig(configFile string) *config.Config {
 	cfg, err := config.FromFile(configFile)
 	if err != nil {
 		log.Fatalf("error loading configuration: %v", err)
@@ -43,8 +43,8 @@ func loadConfig() *config.Config {
 }
 
 // start starts the goverseer service
-func start() {
-	cfg := loadConfig()
+func start(configFile string) {
+	cfg := loadConfig(configFile)
 
 	overseer, err := overseer.New(cfg)
 	if err != nil {
