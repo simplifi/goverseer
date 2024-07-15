@@ -2,9 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -64,47 +62,4 @@ func FromFile(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-// configsInPath returns all configuration files in the given directory
-func configsInPath(path string) ([]string, error) {
-	var files []string
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		ext := filepath.Ext(path)
-		if ext == ".yaml" || ext == ".yml" {
-			files = append(files, path)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
-}
-
-// FromPath reads all configuration files in the given directory
-func FromPath(path string) ([]*Config, error) {
-	configs := []*Config{}
-	files, err := configsInPath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		config, err := FromFile(file)
-		if err != nil {
-			return nil, err
-		}
-		configs = append(configs, config)
-	}
-
-	return configs, nil
 }

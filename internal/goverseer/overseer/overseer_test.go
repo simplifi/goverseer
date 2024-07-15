@@ -9,8 +9,6 @@ import (
 )
 
 func TestOverseer(t *testing.T) {
-	stop := make(chan struct{})
-
 	cfg := &config.Config{
 		Name: "TestManager",
 		Watcher: config.DynamicWatcherConfig{
@@ -26,7 +24,7 @@ func TestOverseer(t *testing.T) {
 	}
 	cfg.ValidateAndSetDefaults()
 
-	overseer, err := New(cfg, stop)
+	overseer, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create Overseer: %v", err)
 	}
@@ -42,6 +40,6 @@ func TestOverseer(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Stop the overseer and wait
-	close(stop)
+	overseer.Stop()
 	wg.Wait()
 }

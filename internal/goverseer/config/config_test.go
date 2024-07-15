@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,44 +27,25 @@ executioner:
 `
 )
 
-func writeTestConfigs(t *testing.T, files ...string) (string, []string) {
+func writeTestConfigs(t *testing.T, content string) (string, string) {
 	t.Helper()
 
 	testConfigDir := t.TempDir()
-	testConfigFiles := make([]string, 0, len(files))
-
-	// Write out the temporary configuration files
-	for n, content := range files {
-		configFile := filepath.Join(testConfigDir, fmt.Sprintf("test%d.yaml", n))
-		testConfigFiles = append(testConfigFiles, configFile)
-		err := os.WriteFile(configFile, []byte(content), 0644)
-		if err != nil {
-			t.Fatalf("Failed to create temporary configuration file: %v", err)
-		}
+	configFile := filepath.Join(testConfigDir, "test.yaml")
+	err := os.WriteFile(configFile, []byte(content), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create temporary configuration file: %v", err)
 	}
 
 	// Return the path list of files
-	return testConfigDir, testConfigFiles
-}
-
-func TestFromPath(t *testing.T) {
-	testConfigDir, testConfigs := writeTestConfigs(t,
-		testConfigWatcherToDummy,
-		testConfigGceToCommand,
-	)
-
-	// Call the FromPath function
-	configs, err := FromPath(testConfigDir)
-	assert.NoError(t, err)
-	assert.Len(t, configs, len(testConfigs))
+	return testConfigDir, configFile
 }
 
 func TestFromFile(t *testing.T) {
-	_, testConfigs := writeTestConfigs(t, testConfigWatcherToDummy)
-	configFile := testConfigs[0]
+	_, testConfig := writeTestConfigs(t, testConfigWatcherToDummy)
 
 	// Call the FromFile function
-	config, err := FromFile(configFile)
+	config, err := FromFile(testConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, "WatcherToDummy", config.Name)
 

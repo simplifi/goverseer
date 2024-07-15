@@ -39,7 +39,7 @@ type Overseer struct {
 }
 
 // New creates a new Overseer
-func New(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
+func New(cfg *config.Config) (*Overseer, error) {
 	// Setup the logger
 	log := slog.
 		New(tint.NewHandler(os.Stdout, nil)).
@@ -65,7 +65,7 @@ func New(cfg *config.Config, stop chan struct{}) (*Overseer, error) {
 		executioner: *executioner,
 		log:         log,
 		changes:     changes,
-		stop:        stop,
+		stop:        make(chan struct{}),
 	}
 
 	return o, nil
@@ -83,7 +83,6 @@ func (o *Overseer) Run() {
 	for {
 		select {
 		case <-o.stop:
-			o.Stop()
 			return
 		case data := <-o.changes:
 			o.wg.Add(1)
@@ -100,6 +99,7 @@ func (o *Overseer) Run() {
 // Stop signals the overseer to stop
 func (o *Overseer) Stop() {
 	o.log.Info("shutting down overseer")
+	close(o.stop)
 	o.watcher.Stop()
 	o.executioner.Stop()
 
