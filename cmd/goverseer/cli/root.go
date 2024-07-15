@@ -8,11 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	rootCmd = &cobra.Command{
-		Use: "goverseer",
-	}
-)
+var rootCmd = &cobra.Command{Use: "goverseer"}
 
 func init() {
 	// Disable timestamps in the log output for the CLI
