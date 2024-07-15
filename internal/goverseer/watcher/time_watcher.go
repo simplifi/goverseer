@@ -42,7 +42,7 @@ func (w *TimeWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error {
 	return nil
 }
 
-// Watch watches the file for changes and sends the path to the changes channel
+// Watch ticks at regular intervals, sending the time to the changes channel
 // The changes channel is where the path to the file is sent when it changes
 func (w *TimeWatcher) Watch(change chan interface{}) {
 	w.log.Info("starting watcher")
