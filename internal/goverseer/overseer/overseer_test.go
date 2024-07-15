@@ -12,14 +12,14 @@ func TestOverseer(t *testing.T) {
 	cfg := &config.Config{
 		Name: "TestManager",
 		Watcher: config.DynamicWatcherConfig{
-			Type: "dummy",
-			Config: &config.DummyWatcherConfig{
+			Type: "time",
+			Config: &config.TimeWatcherConfig{
 				PollSeconds: 1,
 			},
 		},
 		Executioner: config.DynamicExecutionerConfig{
-			Type:   "dummy",
-			Config: &config.DummyExecutionerConfig{},
+			Type:   "log",
+			Config: &config.LogExecutionerConfig{},
 		},
 	}
 	cfg.ValidateAndSetDefaults()

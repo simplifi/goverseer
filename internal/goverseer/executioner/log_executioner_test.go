@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDummyExecutioner_Execute(t *testing.T) {
+func TestLogExecutioner_Execute(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-	cfg := &config.DummyExecutionerConfig{}
+	cfg := &config.LogExecutionerConfig{}
 	cfg.ValidateAndSetDefaults()
 
-	executioner := DummyExecutioner{}
+	executioner := LogExecutioner{}
 	err := executioner.Create(cfg, log)
 	assert.NoError(t, err)
 

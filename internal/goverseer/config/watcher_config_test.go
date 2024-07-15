@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDummyWatcherConfig_ValidateAndSetDefaults(t *testing.T) {
-	config := &DummyWatcherConfig{
+func TestTimeWatcherConfig_ValidateAndSetDefaults(t *testing.T) {
+	config := &TimeWatcherConfig{
 		PollSeconds: 10,
 	}
 

@@ -9,8 +9,8 @@ changes and taking some kind of action based on those changes.
 
 Overseer currently supports:
 
-* Dummy Watcher
-* Dummy Executioner
+* Time Watcher
+* Log Executioner
 
 Planned future support includes:
 

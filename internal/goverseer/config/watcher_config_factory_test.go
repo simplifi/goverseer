@@ -10,11 +10,11 @@ import (
 func TestDynamicWatcherConfig_UnmarshalYAML(t *testing.T) {
 	// Unmarshalling a valid config should not return an error
 	yamlConfigSnippet := []byte(`
-dummy:
+time:
 `)
 	var cfg DynamicWatcherConfig
 	err := yaml.Unmarshal(yamlConfigSnippet, &cfg)
 	assert.NoError(t, err)
-	assert.Equal(t, "dummy", cfg.Type)
-	assert.IsType(t, &DummyWatcherConfig{}, cfg.Config)
+	assert.Equal(t, "time", cfg.Type)
+	assert.IsType(t, &TimeWatcherConfig{}, cfg.Config)
 }

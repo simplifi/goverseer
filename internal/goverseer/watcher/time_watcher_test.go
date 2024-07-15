@@ -12,17 +12,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDummyWatcher_Watch(t *testing.T) {
+func TestTimeWatcher_Watch(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-	cfg := &config.DummyWatcherConfig{}
+	cfg := &config.TimeWatcherConfig{}
 	cfg.ValidateAndSetDefaults()
 
 	// Create a channel to receive changes
 	changes := make(chan interface{})
 	wg := &sync.WaitGroup{}
 
-	// Create a new DummyWatcher
-	watcher := DummyWatcher{}
+	// Create a new TimeWatcher
+	watcher := TimeWatcher{}
 	err := watcher.Create(cfg, log)
 	assert.NoError(t, err)
 	t.Log(watcher.PollInterval)

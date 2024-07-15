@@ -1,11 +1,11 @@
 ---
-name: dummy example
+name: example
 
 watcher:
-  dummy:
+  time:
     poll_seconds: 1
 
 executioner:
-  dummy:
+  log:
 
 

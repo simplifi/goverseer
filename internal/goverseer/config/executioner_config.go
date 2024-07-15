@@ -1,14 +1,14 @@
 package config
 
 func init() {
-	RegisterExecutionerConfig("dummy", func() ExecutionerConfig { return &DummyExecutionerConfig{} })
+	RegisterExecutionerConfig("log", func() ExecutionerConfig { return &LogExecutionerConfig{} })
 }
 
-// DummyExecutionerConfig is the configuration for a dummy executioner
+// LogExecutionerConfig is the configuration for a log executioner
 // this is used for testing and has no configuration
-type DummyExecutionerConfig struct{}
+type LogExecutionerConfig struct{}
 
-// ValidateAndSetDefaults validates the DummyExecutionerConfig and sets default values
-func (cfg *DummyExecutionerConfig) ValidateAndSetDefaults() error {
+// ValidateAndSetDefaults validates the LogExecutionerConfig and sets default values
+func (cfg *LogExecutionerConfig) ValidateAndSetDefaults() error {
 	return nil
 }

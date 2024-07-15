@@ -9,21 +9,21 @@ import (
 )
 
 const (
-	testConfigWatcherToDummy = `
-name: WatcherToDummy
+	testConfigWatcherToLog = `
+name: WatcherToLog
 watcher:
-  dummy:
+  time:
     poll_seconds: 1
 executioner:
-  dummy:
+  log:
 `
 	testConfigGceToCommand = `
 name: GceToCommand
 watcher:
-  dummy:
+  time:
     poll_seconds: 1
 executioner:
-  dummy:
+  log:
 `
 )
 
@@ -42,20 +42,20 @@ func writeTestConfigs(t *testing.T, content string) (string, string) {
 }
 
 func TestFromFile(t *testing.T) {
-	_, testConfig := writeTestConfigs(t, testConfigWatcherToDummy)
+	_, testConfig := writeTestConfigs(t, testConfigWatcherToLog)
 
 	// Call the FromFile function
 	config, err := FromFile(testConfig)
 	assert.NoError(t, err)
-	assert.Equal(t, "WatcherToDummy", config.Name)
+	assert.Equal(t, "WatcherToLog", config.Name)
 
 	// Check the watcher config
-	assert.Equal(t, "dummy", config.Watcher.Type)
-	assert.IsType(t, &DummyWatcherConfig{}, config.Watcher.Config)
+	assert.Equal(t, "time", config.Watcher.Type)
+	assert.IsType(t, &TimeWatcherConfig{}, config.Watcher.Config)
 
 	// Check the executioner config
-	assert.Equal(t, "dummy", config.Executioner.Type)
-	assert.IsType(t, &DummyExecutionerConfig{}, config.Executioner.Config)
+	assert.Equal(t, "log", config.Executioner.Type)
+	assert.IsType(t, &LogExecutionerConfig{}, config.Executioner.Config)
 }
 
 func TestValidateAndSetDefaults(t *testing.T) {
@@ -63,12 +63,12 @@ func TestValidateAndSetDefaults(t *testing.T) {
 	config := &Config{
 		Name: "TestConfig",
 		Watcher: DynamicWatcherConfig{
-			Type:   "dummy",
-			Config: &DummyWatcherConfig{},
+			Type:   "time",
+			Config: &TimeWatcherConfig{},
 		},
 		Executioner: DynamicExecutionerConfig{
-			Type:   "dummy",
-			Config: &DummyExecutionerConfig{},
+			Type:   "log",
+			Config: &LogExecutionerConfig{},
 		},
 	}
 	err := config.ValidateAndSetDefaults()

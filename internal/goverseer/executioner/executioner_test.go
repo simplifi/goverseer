@@ -7,22 +7,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewExecutioner_DummyExecutioner(t *testing.T) {
+func TestNewExecutioner_LogExecutioner(t *testing.T) {
 	cfg := &config.Config{
 		Executioner: config.DynamicExecutionerConfig{
-			Type:   "dummy",
-			Config: &config.DummyExecutionerConfig{},
+			Type:   "log",
+			Config: &config.LogExecutionerConfig{},
 		},
 		Watcher: config.DynamicWatcherConfig{
-			Type:   "dummy",
-			Config: &config.DummyWatcherConfig{},
+			Type:   "time",
+			Config: &config.TimeWatcherConfig{},
 		},
 	}
 	cfg.ValidateAndSetDefaults()
 
 	executioner, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &DummyExecutioner{}, *executioner)
+	assert.IsType(t, &LogExecutioner{}, *executioner)
 }
 
 func TestNewExecutioner_Unknown(t *testing.T) {
@@ -31,8 +31,8 @@ func TestNewExecutioner_Unknown(t *testing.T) {
 			Type: "foo",
 		},
 		Watcher: config.DynamicWatcherConfig{
-			Type:   "dummy",
-			Config: &config.DummyWatcherConfig{},
+			Type:   "time",
+			Config: &config.TimeWatcherConfig{},
 		},
 	}
 

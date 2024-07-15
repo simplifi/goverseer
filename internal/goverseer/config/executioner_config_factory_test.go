@@ -10,11 +10,11 @@ import (
 func TestDynamicExecutionerConfig_UnmarshalYAML(t *testing.T) {
 	// Unmarshalling a valid config should not return an error
 	yamlConfigSnippet := []byte(`
-dummy:
+log:
 `)
 	var cfg DynamicExecutionerConfig
 	err := yaml.Unmarshal(yamlConfigSnippet, &cfg)
 	assert.NoError(t, err)
-	assert.Equal(t, "dummy", cfg.Type)
-	assert.IsType(t, &DummyExecutionerConfig{}, cfg.Config)
+	assert.Equal(t, "log", cfg.Type)
+	assert.IsType(t, &LogExecutionerConfig{}, cfg.Config)
 }

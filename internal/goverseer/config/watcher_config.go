@@ -3,17 +3,17 @@ package config
 import "fmt"
 
 func init() {
-	RegisterWatcherConfig("dummy", func() WatcherConfig { return &DummyWatcherConfig{} })
+	RegisterWatcherConfig("time", func() WatcherConfig { return &TimeWatcherConfig{} })
 }
 
-// DummyWatcherConfig is the configuration for a Dummy watcher
-type DummyWatcherConfig struct {
+// TimeWatcherConfig is the configuration for a time watcher
+type TimeWatcherConfig struct {
 	// PollSeconds is the number of seconds to wait between ticks
 	PollSeconds int `yaml:"poll_seconds"`
 }
 
-// ValidateAndSetDefaults validates the DummyWatcherConfig and sets default values
-func (cfg *DummyWatcherConfig) ValidateAndSetDefaults() error {
+// ValidateAndSetDefaults validates the TimeWatcherConfig and sets default values
+func (cfg *TimeWatcherConfig) ValidateAndSetDefaults() error {
 	if cfg.PollSeconds == 0 {
 		cfg.PollSeconds = 1 // default to 1 second
 	}

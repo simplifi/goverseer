@@ -7,24 +7,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewWatcher_DummyWatcher(t *testing.T) {
+func TestNewWatcher_TimeWatcher(t *testing.T) {
 	cfg := &config.Config{
 		Watcher: config.DynamicWatcherConfig{
-			Type: "dummy",
-			Config: &config.DummyWatcherConfig{
+			Type: "time",
+			Config: &config.TimeWatcherConfig{
 				PollSeconds: 100,
 			},
 		},
 		Executioner: config.DynamicExecutionerConfig{
-			Type:   "dummy",
-			Config: &config.DummyExecutionerConfig{},
+			Type:   "log",
+			Config: &config.LogExecutionerConfig{},
 		},
 	}
 	cfg.ValidateAndSetDefaults()
 
 	watcher, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &DummyWatcher{}, *watcher)
+	assert.IsType(t, &TimeWatcher{}, *watcher)
 }
 
 func TestNewWatcher_Unknown(t *testing.T) {
@@ -33,8 +33,8 @@ func TestNewWatcher_Unknown(t *testing.T) {
 			Type: "foo",
 		},
 		Executioner: config.DynamicExecutionerConfig{
-			Type:   "dummy",
-			Config: &config.DummyExecutionerConfig{},
+			Type:   "log",
+			Config: &config.LogExecutionerConfig{},
 		},
 	}
 
