@@ -20,15 +20,14 @@ Planned future support includes:
 
 ## Building
 
-To build Goverseer, simply run `go build ./cmd/goverseer`. Once complete, you
+To build Goverseer, simply run `make build`. Once complete, you
 should see a binary in the root of your checkout.
 
 ## Development
 
 To run locally during development, run `go run ./cmd/goverseer --help`.
 
-To run all tests, run `go test -count 1 -v ./...` (the `-count 1` avoids caching
-results.
+To run all tests, run `make test`.
 
 ### Accessing GCE Metadata Locally
 
