@@ -30,8 +30,8 @@ type Overseer struct {
 	// stop is a channel to signal the overseer to stop
 	stop chan struct{}
 
-	// wg is the wait group for all overseer goroutines
-	wg sync.WaitGroup
+	// waitGroup is the wait group for all overseer goroutines
+	waitGroup sync.WaitGroup
 }
 
 // New creates a new Overseer
@@ -65,9 +65,9 @@ func New(cfg *config.Config) (*Overseer, error) {
 // Run starts the overseer
 func (o *Overseer) Run() {
 	// Send data to the change channel for processing
-	o.wg.Add(1)
+	o.waitGroup.Add(1)
 	go func() {
-		defer o.wg.Done()
+		defer o.waitGroup.Done()
 		o.watcher.Watch(o.change)
 	}()
 
@@ -76,9 +76,9 @@ func (o *Overseer) Run() {
 		case <-o.stop:
 			return
 		case data := <-o.change:
-			o.wg.Add(1)
+			o.waitGroup.Add(1)
 			go func() {
-				defer o.wg.Done()
+				defer o.waitGroup.Done()
 				if err := o.executioner.Execute(data); err != nil {
 					o.log.Error("error running executioner", tint.Err(err))
 				}
@@ -96,7 +96,7 @@ func (o *Overseer) Stop() {
 
 	o.log.Info("waiting for overseer to finish")
 	// Wait here so we don't close the changes channel before the executioner is done
-	o.wg.Wait()
+	o.waitGroup.Wait()
 	o.log.Info("done")
 	close(o.change)
 }
