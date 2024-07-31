@@ -1,6 +1,6 @@
 module github.com/simplifi/goverseer
 
-go 1.22
+go 1.22.5
 
 require (
 	github.com/lmittmann/tint v1.0.4
