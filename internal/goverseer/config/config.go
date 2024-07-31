@@ -9,15 +9,15 @@ import (
 // Config is the configuration for a watcher and executioner
 type Config struct {
 	// Name is the name of the configuration, this will show up in logs
-	Name string `yaml:"name"`
+	Name string
 
 	// Watcher is the configuration for the watcher
 	// it is dynamic because the configuration can be different for each watcher
-	Watcher DynamicWatcherConfig `yaml:"watcher"`
+	Watcher DynamicWatcherConfig
 
 	// Executioner is the configuration for the executioner
 	// it is dynamic because the configuration can be different for each executioner
-	Executioner DynamicExecutionerConfig `yaml:"executioner"`
+	Executioner DynamicExecutionerConfig
 }
 
 // ValidateAndSetDefaults validates the Config and sets default values
