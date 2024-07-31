@@ -52,8 +52,8 @@ func New(cfg *config.Config) (*Overseer, error) {
 	}
 
 	o := &Overseer{
-		watcher:     *watcher,
-		executioner: *executioner,
+		watcher:     watcher,
+		executioner: executioner,
 		log:         log,
 		change:      make(chan interface{}),
 		stop:        make(chan struct{}),

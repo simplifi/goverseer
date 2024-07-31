@@ -12,10 +12,6 @@ var (
 	_ Executioner = (*LogExecutioner)(nil)
 )
 
-func init() {
-	RegisterExecutioner("log", func() Executioner { return &LogExecutioner{} })
-}
-
 // LogExecutioner logs the data to stdout
 type LogExecutioner struct {
 	// log is the logger

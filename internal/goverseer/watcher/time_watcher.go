@@ -13,10 +13,6 @@ var (
 	_ Watcher = (*TimeWatcher)(nil)
 )
 
-func init() {
-	RegisterWatcher("time", func() Watcher { return &TimeWatcher{} })
-}
-
 // TimeWatcher is a time watcher that ticks at a regular interval
 type TimeWatcher struct {
 	// PollInterval is the interval to to wait between ticks

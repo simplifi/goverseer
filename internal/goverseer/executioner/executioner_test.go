@@ -22,7 +22,7 @@ func TestNewExecutioner_LogExecutioner(t *testing.T) {
 
 	executioner, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &LogExecutioner{}, *executioner)
+	assert.IsType(t, &LogExecutioner{}, executioner)
 }
 
 func TestNewExecutioner_Unknown(t *testing.T) {

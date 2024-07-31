@@ -24,7 +24,7 @@ func TestNewWatcher_TimeWatcher(t *testing.T) {
 
 	watcher, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &TimeWatcher{}, *watcher)
+	assert.IsType(t, &TimeWatcher{}, watcher)
 }
 
 func TestNewWatcher_Unknown(t *testing.T) {
