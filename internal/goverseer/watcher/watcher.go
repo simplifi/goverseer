@@ -12,7 +12,6 @@ import (
 // Watcher is an interface for watching for changes
 type Watcher interface {
 	Watch(change chan interface{})
-	Create(cfg config.WatcherConfig, log *slog.Logger) error
 	Stop()
 }
 
@@ -27,9 +26,7 @@ func New(cfg *config.Config) (Watcher, error) {
 
 	switch cfg.Watcher.Type {
 	case "time":
-		exec := TimeWatcher{}
-		err := exec.Create(cfg.Watcher.Config, log)
-		return &exec, err
+		return newTimeWatcher(cfg.Watcher.Config, log)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}

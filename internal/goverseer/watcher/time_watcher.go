@@ -25,17 +25,17 @@ type TimeWatcher struct {
 	stop chan struct{}
 }
 
-func (w *TimeWatcher) Create(cfg config.WatcherConfig, log *slog.Logger) error {
+func newTimeWatcher(cfg config.WatcherConfig, log *slog.Logger) (*TimeWatcher, error) {
 	v, ok := cfg.(*config.TimeWatcherConfig)
 	if !ok {
-		return fmt.Errorf("invalid config for time watcher, got %T", cfg)
+		return nil, fmt.Errorf("invalid config for time watcher, got %T", cfg)
 	}
 
-	w.PollInterval = time.Duration(v.PollSeconds) * time.Second
-	w.log = log
-	w.stop = make(chan struct{})
-
-	return nil
+	return &TimeWatcher{
+		PollInterval: time.Duration(v.PollSeconds) * time.Second,
+		log:          log,
+		stop:         make(chan struct{}),
+	}, nil
 }
 
 // Watch ticks at regular intervals, sending the time to the changes channel

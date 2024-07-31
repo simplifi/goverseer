@@ -22,8 +22,7 @@ func TestTimeWatcher_Watch(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	// Create a new TimeWatcher
-	watcher := TimeWatcher{}
-	err := watcher.Create(cfg, log)
+	watcher, err := newTimeWatcher(cfg, log)
 	assert.NoError(t, err)
 	t.Log(watcher.PollInterval)
 	// Start watching the file
