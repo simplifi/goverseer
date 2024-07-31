@@ -15,8 +15,7 @@ func TestLogExecutioner_Execute(t *testing.T) {
 	cfg := &config.LogExecutionerConfig{}
 	cfg.ValidateAndSetDefaults()
 
-	executioner := LogExecutioner{}
-	err := executioner.Create(cfg, log)
+	executioner, err := newLogExecutioner(cfg, log)
 	assert.NoError(t, err)
 
 	err = executioner.Execute("foo")

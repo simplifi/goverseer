@@ -12,7 +12,6 @@ import (
 // Executioner is an interface for executing actions
 type Executioner interface {
 	Execute(data interface{}) error
-	Create(cfg config.ExecutionerConfig, log *slog.Logger) error
 	Stop()
 }
 
@@ -26,9 +25,7 @@ func New(cfg *config.Config) (Executioner, error) {
 
 	switch cfg.Executioner.Type {
 	case "log":
-		exec := LogExecutioner{}
-		err := exec.Create(cfg.Executioner.Config, log)
-		return &exec, err
+		return newLogExecutioner(cfg.Executioner.Config, log)
 	default:
 		return nil, fmt.Errorf("unknown executioner type: %s", cfg.Executioner.Type)
 	}

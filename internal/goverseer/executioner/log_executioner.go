@@ -18,15 +18,15 @@ type LogExecutioner struct {
 	log *slog.Logger
 }
 
-func (e *LogExecutioner) Create(cfg config.ExecutionerConfig, log *slog.Logger) error {
+func newLogExecutioner(cfg config.ExecutionerConfig, log *slog.Logger) (*LogExecutioner, error) {
 	_, ok := cfg.(*config.LogExecutionerConfig)
 	if !ok {
-		return fmt.Errorf("invalid config for log executioner")
+		return nil, fmt.Errorf("invalid config for log executioner")
 	}
 
-	e.log = log
-
-	return nil
+	return &LogExecutioner{
+		log: log,
+	}, nil
 }
 
 // Execute logs the data to stdout
