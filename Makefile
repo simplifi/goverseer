@@ -4,7 +4,7 @@ TAG?=""
 
 # Run all tests
 .PHONY: test
-test: fmt vet test-unit go-mod-tidy
+test: fmt vet test-unit tidy
 
 # Run unit tests
 .PHONY: test-unit
@@ -12,8 +12,8 @@ test-unit:
 	go test -count 1 -v -race ./...
 
 # Clean go.mod
-.PHONY: go-mod-tidy
-go-mod-tidy:
+.PHONY: tidy
+tidy:
 	go mod tidy
 	git diff --exit-code go.sum
 
