@@ -1,0 +1,10 @@
+---
+name: example
+
+watcher:
+  time:
+    poll_seconds: 1
+
+executioner:
+  log:
+
