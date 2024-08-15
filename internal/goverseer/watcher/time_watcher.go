@@ -8,10 +8,45 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
+const (
+	// DefaultPollSeconds is the default number of seconds to wait between ticks
+	DefaultPollSeconds = 1
+)
+
 var (
 	// Ensure this implements the Watcher interface
 	_ Watcher = (*TimeWatcher)(nil)
 )
+
+// TimeWatcherConfig is the configuration for a time watcher
+type TimeWatcherConfig struct {
+	// PollSeconds is the number of seconds to wait between ticks
+	PollSeconds int
+}
+
+// ParseConfig parses the config for a time watcher
+// It validates the config, sets defaults if missing, and returns the config
+func ParseConfig(config interface{}) (*TimeWatcherConfig, error) {
+	cfgMap, ok := config.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid config")
+	}
+
+	twc := &TimeWatcherConfig{
+		PollSeconds: DefaultPollSeconds,
+	}
+
+	if pollSeconds, ok := cfgMap["poll_seconds"].(int); ok {
+		if pollSeconds < 1 {
+			return nil, fmt.Errorf("poll_seconds must be greater than or equal to 1")
+		}
+		twc.PollSeconds = pollSeconds
+	} else if cfgMap["poll_seconds"] != nil {
+		return nil, fmt.Errorf("poll_seconds must be an integer")
+	}
+
+	return twc, nil
+}
 
 // TimeWatcher is a time watcher that ticks at a regular interval
 type TimeWatcher struct {
@@ -25,14 +60,14 @@ type TimeWatcher struct {
 	stop chan struct{}
 }
 
-func newTimeWatcher(cfg config.WatcherConfig, log *slog.Logger) (*TimeWatcher, error) {
-	v, ok := cfg.(*config.TimeWatcherConfig)
-	if !ok {
-		return nil, fmt.Errorf("invalid config for time watcher, got %T", cfg)
+func newTimeWatcher(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
+	tcfg, err := ParseConfig(cfg.Watcher.Config)
+	if err != nil {
+		return nil, err
 	}
 
 	return &TimeWatcher{
-		PollInterval: time.Duration(v.PollSeconds) * time.Second,
+		PollInterval: time.Duration(tcfg.PollSeconds) * time.Second,
 		log:          log,
 		stop:         make(chan struct{}),
 	}, nil
