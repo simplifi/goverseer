@@ -16,7 +16,7 @@ type WatcherConfig struct {
 	Config interface{}
 }
 
-// UnmarshalYAML implements the yaml.Unmarshaler interface for DynamicWatcherConfig
+// UnmarshalYAML implements the yaml.Unmarshaler interface for WatcherConfig
 // Because we want to have the type parsed from the yaml node rather than having
 // to specify a watcher.type node in the config we need custom unmarshalling
 func (d *WatcherConfig) UnmarshalYAML(value *yaml.Node) error {
