@@ -11,11 +11,11 @@ import (
 func TestOverseer(t *testing.T) {
 	cfg := &config.Config{
 		Name: "TestManager",
-		Watcher: config.DynamicWatcherConfig{
+		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: &config.TimeWatcherConfig{
-				PollSeconds: 1,
-			},
+			Config: map[string]interface{}(map[string]interface{}{
+				"poll_seconds": 1,
+			}),
 		},
 		Executioner: config.DynamicExecutionerConfig{
 			Type:   "log",

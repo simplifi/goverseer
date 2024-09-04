@@ -51,7 +51,7 @@ func TestFromFile(t *testing.T) {
 
 	// Check the watcher config
 	assert.Equal(t, "time", config.Watcher.Type)
-	assert.IsType(t, &TimeWatcherConfig{}, config.Watcher.Config)
+	assert.IsType(t, map[string]interface{}(map[string]interface{}{"poll_seconds": 1}), config.Watcher.Config)
 
 	// Check the executioner config
 	assert.Equal(t, "log", config.Executioner.Type)
@@ -62,9 +62,11 @@ func TestValidateAndSetDefaults(t *testing.T) {
 	// A basic valid configuration
 	config := &Config{
 		Name: "TestConfig",
-		Watcher: DynamicWatcherConfig{
-			Type:   "time",
-			Config: &TimeWatcherConfig{},
+		Watcher: WatcherConfig{
+			Type: "time",
+			Config: map[string]interface{}(map[string]interface{}{
+				"poll_seconds": 1,
+			}),
 		},
 		Executioner: DynamicExecutionerConfig{
 			Type:   "log",

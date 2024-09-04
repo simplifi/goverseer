@@ -13,9 +13,11 @@ func TestNewExecutioner_LogExecutioner(t *testing.T) {
 			Type:   "log",
 			Config: &config.LogExecutionerConfig{},
 		},
-		Watcher: config.DynamicWatcherConfig{
-			Type:   "time",
-			Config: &config.TimeWatcherConfig{},
+		Watcher: config.WatcherConfig{
+			Type: "time",
+			Config: map[string]interface{}(map[string]interface{}{
+				"poll_seconds": 1,
+			}),
 		},
 	}
 	cfg.ValidateAndSetDefaults()
@@ -30,9 +32,9 @@ func TestNewExecutioner_Unknown(t *testing.T) {
 		Executioner: config.DynamicExecutionerConfig{
 			Type: "foo",
 		},
-		Watcher: config.DynamicWatcherConfig{
+		Watcher: config.WatcherConfig{
 			Type:   "time",
-			Config: &config.TimeWatcherConfig{},
+			Config: map[string]interface{}(map[string]interface{}{"poll_seconds": 1}),
 		},
 	}
 

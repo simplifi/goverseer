@@ -9,11 +9,11 @@ import (
 
 func TestNewWatcher_TimeWatcher(t *testing.T) {
 	cfg := &config.Config{
-		Watcher: config.DynamicWatcherConfig{
+		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: &config.TimeWatcherConfig{
-				PollSeconds: 100,
-			},
+			Config: map[string]interface{}(map[string]interface{}{
+				"poll_seconds": 1,
+			}),
 		},
 		Executioner: config.DynamicExecutionerConfig{
 			Type:   "log",
@@ -29,7 +29,7 @@ func TestNewWatcher_TimeWatcher(t *testing.T) {
 
 func TestNewWatcher_Unknown(t *testing.T) {
 	cfg := &config.Config{
-		Watcher: config.DynamicWatcherConfig{
+		Watcher: config.WatcherConfig{
 			Type: "foo",
 		},
 		Executioner: config.DynamicExecutionerConfig{

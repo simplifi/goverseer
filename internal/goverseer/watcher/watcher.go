@@ -26,7 +26,7 @@ func New(cfg *config.Config) (Watcher, error) {
 
 	switch cfg.Watcher.Type {
 	case "time":
-		return newTimeWatcher(cfg.Watcher.Config, log)
+		return newTimeWatcher(*cfg, log)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}
