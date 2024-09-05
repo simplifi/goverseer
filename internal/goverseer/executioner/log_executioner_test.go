@@ -13,16 +13,16 @@ import (
 // TestLogExecutioner_ParseConfig tests the ParseConfig function
 func TestLogExecutioner_ParseConfig(t *testing.T) {
 	// Unmarshalling a valid config should not return an error
-	validConfig := map[string]interface{}(map[string]interface{}{
+	validConfig := map[string]interface{}{
 		"tag": "test",
-	})
+	}
 
 	cfg, err := ParseConfig(validConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, "test", cfg.Tag)
 
 	// Unmarshalling a config without tag should return a default value
-	emptyConfig := map[string]interface{}(map[string]interface{}{})
+	emptyConfig := map[string]interface{}{}
 	cfg, err = ParseConfig(emptyConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, DefaultTag, cfg.Tag)
@@ -38,9 +38,9 @@ func TestLogExecutioner_Execute(t *testing.T) {
 		},
 		Executioner: config.ExecutionerConfig{
 			Type: "log",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"tag": "test",
-			}),
+			},
 		},
 	}
 

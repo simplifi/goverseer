@@ -12,15 +12,15 @@ func TestExecutioner_New(t *testing.T) {
 	cfg := &config.Config{
 		Executioner: config.ExecutionerConfig{
 			Type: "log",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"tag": "test",
-			}),
+			},
 		},
 		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"poll_seconds": 1,
-			}),
+			},
 		},
 	}
 

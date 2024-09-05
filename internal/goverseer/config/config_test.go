@@ -49,9 +49,9 @@ func TestFromFile(t *testing.T) {
 
 	// Check the watcher config
 	assert.Equal(t, "time", config.Watcher.Type)
-	assert.IsType(t, map[string]interface{}(map[string]interface{}{"poll_seconds": 1}), config.Watcher.Config)
+	assert.IsType(t, map[string]interface{}{"poll_seconds": 1}, config.Watcher.Config)
 
 	// Check the executioner config
 	assert.Equal(t, "log", config.Executioner.Type)
-	assert.IsType(t, map[string]interface{}(map[string]interface{}{"tag": "test"}), config.Executioner.Config)
+	assert.IsType(t, map[string]interface{}{"tag": "test"}, config.Executioner.Config)
 }

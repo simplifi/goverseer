@@ -14,15 +14,15 @@ func TestOverseer(t *testing.T) {
 		Name: "TestManager",
 		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"poll_seconds": 1,
-			}),
+			},
 		},
 		Executioner: config.ExecutionerConfig{
 			Type: "log",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"tag": "test",
-			}),
+			},
 		},
 	}
 

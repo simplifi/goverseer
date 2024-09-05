@@ -12,15 +12,15 @@ func TestWatcher_New(t *testing.T) {
 	cfg := &config.Config{
 		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"poll_seconds": 1,
-			}),
+			},
 		},
 		Executioner: config.ExecutionerConfig{
 			Type: "log",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"tag": "test",
-			}),
+			},
 		},
 	}
 	// A valid configuration should not return an error
