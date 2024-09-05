@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestTimeWatcher_ParseConfig tests the ParseConfig function
 func TestTimeWatcher_ParseConfig(t *testing.T) {
 	// Unmarshalling a valid config should not return an error
 	validConfig := map[string]interface{}(map[string]interface{}{
@@ -45,6 +46,7 @@ func TestTimeWatcher_ParseConfig(t *testing.T) {
 	assert.Equal(t, DefaultPollSeconds, cfg.PollSeconds)
 }
 
+// TestTimeWatcher_Watch tests the Watch function
 func TestTimeWatcher_Watch(t *testing.T) {
 	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	cfg := config.Config{
@@ -55,7 +57,7 @@ func TestTimeWatcher_Watch(t *testing.T) {
 				"poll_seconds": 1,
 			}),
 		},
-		Executioner: config.DynamicExecutionerConfig{},
+		Executioner: config.ExecutionerConfig{},
 	}
 
 	// Create a channel to receive changes

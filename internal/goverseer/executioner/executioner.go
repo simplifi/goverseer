@@ -16,6 +16,7 @@ type Executioner interface {
 }
 
 // New creates a new Executioner based on the config
+// It returns an Executioner based on the config or an error
 func New(cfg *config.Config) (Executioner, error) {
 	// Setup the logger
 	log := slog.
@@ -25,7 +26,7 @@ func New(cfg *config.Config) (Executioner, error) {
 
 	switch cfg.Executioner.Type {
 	case "log":
-		return newLogExecutioner(cfg.Executioner.Config, log)
+		return newLogExecutioner(*cfg, log)
 	default:
 		return nil, fmt.Errorf("unknown executioner type: %s", cfg.Executioner.Type)
 	}

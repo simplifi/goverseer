@@ -8,6 +8,7 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
+// TestOverseer tests the Overseer
 func TestOverseer(t *testing.T) {
 	cfg := &config.Config{
 		Name: "TestManager",
@@ -17,12 +18,13 @@ func TestOverseer(t *testing.T) {
 				"poll_seconds": 1,
 			}),
 		},
-		Executioner: config.DynamicExecutionerConfig{
-			Type:   "log",
-			Config: &config.LogExecutionerConfig{},
+		Executioner: config.ExecutionerConfig{
+			Type: "log",
+			Config: map[string]interface{}(map[string]interface{}{
+				"tag": "test",
+			}),
 		},
 	}
-	cfg.ValidateAndSetDefaults()
 
 	overseer, err := New(cfg)
 	if err != nil {

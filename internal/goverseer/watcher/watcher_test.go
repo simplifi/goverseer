@@ -7,7 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewWatcher_TimeWatcher(t *testing.T) {
+// TestWatcher_New tests the New function
+func TestWatcher_New(t *testing.T) {
 	cfg := &config.Config{
 		Watcher: config.WatcherConfig{
 			Type: "time",
@@ -15,29 +16,20 @@ func TestNewWatcher_TimeWatcher(t *testing.T) {
 				"poll_seconds": 1,
 			}),
 		},
-		Executioner: config.DynamicExecutionerConfig{
-			Type:   "log",
-			Config: &config.LogExecutionerConfig{},
+		Executioner: config.ExecutionerConfig{
+			Type: "log",
+			Config: map[string]interface{}(map[string]interface{}{
+				"tag": "test",
+			}),
 		},
 	}
-	cfg.ValidateAndSetDefaults()
-
+	// A valid configuration should not return an error
 	watcher, err := New(cfg)
 	assert.NoError(t, err)
 	assert.IsType(t, &TimeWatcher{}, watcher)
-}
 
-func TestNewWatcher_Unknown(t *testing.T) {
-	cfg := &config.Config{
-		Watcher: config.WatcherConfig{
-			Type: "foo",
-		},
-		Executioner: config.DynamicExecutionerConfig{
-			Type:   "log",
-			Config: &config.LogExecutionerConfig{},
-		},
-	}
-
-	_, err := New(cfg)
+	// An invalid configuration should return an error
+	cfg.Watcher.Type = "foo"
+	_, err = New(cfg)
 	assert.Error(t, err, "should throw an error for unknown watcher type")
 }

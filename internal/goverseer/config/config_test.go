@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	// testConfigWatcherToLog is a basic test configuration for a time watcher and
+	// a log executioner
 	testConfigWatcherToLog = `
 name: WatcherToLog
 watcher:
@@ -16,17 +18,12 @@ watcher:
     poll_seconds: 1
 executioner:
   log:
-`
-	testConfigGceToCommand = `
-name: GceToCommand
-watcher:
-  time:
-    poll_seconds: 1
-executioner:
-  log:
+    tag: test
 `
 )
 
+// writeTestConfigs writes test configurations to a temporary directory
+// It returns the path to the directory and the path to the configuration file
 func writeTestConfigs(t *testing.T, content string) (string, string) {
 	t.Helper()
 
@@ -41,6 +38,7 @@ func writeTestConfigs(t *testing.T, content string) (string, string) {
 	return testConfigDir, configFile
 }
 
+// TestFromFile tests the FromFile function
 func TestFromFile(t *testing.T) {
 	_, testConfig := writeTestConfigs(t, testConfigWatcherToLog)
 
@@ -55,24 +53,5 @@ func TestFromFile(t *testing.T) {
 
 	// Check the executioner config
 	assert.Equal(t, "log", config.Executioner.Type)
-	assert.IsType(t, &LogExecutionerConfig{}, config.Executioner.Config)
-}
-
-func TestValidateAndSetDefaults(t *testing.T) {
-	// A basic valid configuration
-	config := &Config{
-		Name: "TestConfig",
-		Watcher: WatcherConfig{
-			Type: "time",
-			Config: map[string]interface{}(map[string]interface{}{
-				"poll_seconds": 1,
-			}),
-		},
-		Executioner: DynamicExecutionerConfig{
-			Type:   "log",
-			Config: &LogExecutionerConfig{},
-		},
-	}
-	err := config.ValidateAndSetDefaults()
-	assert.NoError(t, err)
+	assert.IsType(t, map[string]interface{}(map[string]interface{}{"tag": "test"}), config.Executioner.Config)
 }
