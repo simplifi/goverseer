@@ -1,4 +1,4 @@
-package watcher
+package time
 
 import (
 	"fmt"
@@ -11,11 +11,6 @@ import (
 const (
 	// DefaultPollSeconds is the default number of seconds to wait between ticks
 	DefaultPollSeconds = 1
-)
-
-var (
-	// Ensure this implements the Watcher interface
-	_ Watcher = (*TimeWatcher)(nil)
 )
 
 // TimeWatcherConfig is the configuration for a time watcher
@@ -60,7 +55,8 @@ type TimeWatcher struct {
 	stop chan struct{}
 }
 
-func newTimeWatcher(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
+// New creates a new TimeWatcher based on the config
+func New(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
 	tcfg, err := ParseConfig(cfg.Watcher.Config)
 	if err != nil {
 		return nil, err
