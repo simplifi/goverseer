@@ -7,37 +7,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewExecutioner_LogExecutioner(t *testing.T) {
+// TestExecutioner_New tests the New function
+func TestExecutioner_New(t *testing.T) {
 	cfg := &config.Config{
-		Executioner: config.DynamicExecutionerConfig{
-			Type:   "log",
-			Config: &config.LogExecutionerConfig{},
+		Executioner: config.ExecutionerConfig{
+			Type: "log",
+			Config: map[string]interface{}{
+				"tag": "test",
+			},
 		},
 		Watcher: config.WatcherConfig{
 			Type: "time",
-			Config: map[string]interface{}(map[string]interface{}{
+			Config: map[string]interface{}{
 				"poll_seconds": 1,
-			}),
+			},
 		},
 	}
-	cfg.ValidateAndSetDefaults()
 
+	// A valid configuration should not return an error
 	executioner, err := New(cfg)
 	assert.NoError(t, err)
 	assert.IsType(t, &LogExecutioner{}, executioner)
-}
 
-func TestNewExecutioner_Unknown(t *testing.T) {
-	cfg := &config.Config{
-		Executioner: config.DynamicExecutionerConfig{
-			Type: "foo",
-		},
-		Watcher: config.WatcherConfig{
-			Type:   "time",
-			Config: map[string]interface{}(map[string]interface{}{"poll_seconds": 1}),
-		},
-	}
-
-	_, err := New(cfg)
+	// An invalid configuration should return an error
+	cfg.Executioner.Type = "foo"
+	_, err = New(cfg)
 	assert.Error(t, err, "should throw an error for unknown executioner type")
 }

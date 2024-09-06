@@ -7,21 +7,57 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
+const (
+	// DefaultTag is the default tag to add to the logs
+	DefaultTag = ""
+)
+
 var (
 	// Ensure this implements the Executioner interface
 	_ Executioner = (*LogExecutioner)(nil)
 )
 
+// LogExecutionerConfig is the configuration for a log executioner
+type LogExecutionerConfig struct {
+	// Tag is a tag to add to the logs, by default it is empty
+	Tag string
+}
+
+// ParseConfig parses the config for a log executioner
+// It validates the config, sets defaults if missing, and returns the config
+func ParseConfig(config interface{}) (*LogExecutionerConfig, error) {
+	cfgMap, ok := config.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid config")
+	}
+
+	lec := &LogExecutionerConfig{
+		Tag: DefaultTag,
+	}
+
+	if tag, ok := cfgMap["tag"].(string); ok {
+		lec.Tag = tag
+	}
+
+	return lec, nil
+}
+
 // LogExecutioner logs the data to stdout
+// It implements the Executioner interface
 type LogExecutioner struct {
 	// log is the logger
 	log *slog.Logger
 }
 
-func newLogExecutioner(cfg config.ExecutionerConfig, log *slog.Logger) (*LogExecutioner, error) {
-	_, ok := cfg.(*config.LogExecutionerConfig)
-	if !ok {
-		return nil, fmt.Errorf("invalid config for log executioner")
+// newLogExecutioner creates a new LogExecutioner based on the config
+func newLogExecutioner(cfg config.Config, log *slog.Logger) (*LogExecutioner, error) {
+	lcfg, err := ParseConfig(cfg.Executioner.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	if lcfg.Tag != "" {
+		log = log.With("tag", lcfg.Tag)
 	}
 
 	return &LogExecutioner{
