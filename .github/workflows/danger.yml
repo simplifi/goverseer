@@ -1,0 +1,10 @@
+name: danger
+
+on:
+  pull_request:
+    types: [edited, opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  danger:
+    uses: simplifi/sifi-danger/.github/workflows/run-danger.yml@main
+    secrets: inherit
