@@ -27,6 +27,11 @@ fmt:
 vet:
 	go vet ./...
 
+# Run a test release with goreleaser
+.PHONY: test-release
+test-release:
+	goreleaser release --snapshot --skip=publish --clean
+
 # Clean up any cruft left over from old builds
 .PHONY: clean
 clean:
@@ -42,3 +47,8 @@ build: clean
 tag:
 	git tag -a $(TAG) -m "Release $(TAG)"
 	git push origin $(TAG)
+
+# Requires GITHUB_TOKEN environment variable to be set
+.PHONY: release
+release: clean
+	goreleaser release --clean
