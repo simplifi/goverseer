@@ -7,7 +7,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
-	"github.com/simplifi/goverseer/internal/goverseer/watcher/time"
+	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
 )
 
 // Watcher is an interface for watching for changes
@@ -27,7 +27,7 @@ func New(cfg *config.Config) (Watcher, error) {
 
 	switch cfg.Watcher.Type {
 	case "time":
-		return time.New(*cfg, logger)
+		return time_watcher.New(*cfg, logger)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}

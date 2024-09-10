@@ -1,4 +1,4 @@
-package time
+package time_watcher
 
 import (
 	"fmt"

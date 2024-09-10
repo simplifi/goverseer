@@ -7,7 +7,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
-	"github.com/simplifi/goverseer/internal/goverseer/executioner/log"
+	"github.com/simplifi/goverseer/internal/goverseer/executioner/log_executioner"
 )
 
 // Executioner is an interface for executing actions
@@ -27,7 +27,7 @@ func New(cfg *config.Config) (Executioner, error) {
 
 	switch cfg.Executioner.Type {
 	case "log":
-		return log.New(*cfg, logger)
+		return log_executioner.New(*cfg, logger)
 	default:
 		return nil, fmt.Errorf("unknown executioner type: %s", cfg.Executioner.Type)
 	}

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/simplifi/goverseer/internal/goverseer/config"
-	"github.com/simplifi/goverseer/internal/goverseer/executioner/log"
+	"github.com/simplifi/goverseer/internal/goverseer/executioner/log_executioner"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,7 +28,7 @@ func TestExecutioner_New(t *testing.T) {
 	// A valid configuration should not return an error
 	executioner, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &log.LogExecutioner{}, executioner)
+	assert.IsType(t, &log_executioner.LogExecutioner{}, executioner)
 
 	// An invalid configuration should return an error
 	cfg.Executioner.Type = "foo"
