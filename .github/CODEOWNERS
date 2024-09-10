@@ -2,4 +2,4 @@
 # See https://help.github.com/articles/about-code-owners/ for syntax information.
 # Note that later entries override previous entries.
 
-*                          @simplifi/capybaras
+* @simplifi/capybaras
