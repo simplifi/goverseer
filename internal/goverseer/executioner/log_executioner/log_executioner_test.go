@@ -1,4 +1,4 @@
-package executioner
+package log_executioner
 
 import (
 	"log/slog"
@@ -30,7 +30,7 @@ func TestLogExecutioner_ParseConfig(t *testing.T) {
 
 // TestLogExecutioner_Execute tests the Execute method of LogExecutioner
 func TestLogExecutioner_Execute(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
+	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	cfg := config.Config{
 		Name: "TestConfig",
 		Watcher: config.WatcherConfig{
@@ -44,7 +44,7 @@ func TestLogExecutioner_Execute(t *testing.T) {
 		},
 	}
 
-	executioner, err := newLogExecutioner(cfg, log)
+	executioner, err := New(cfg, logger)
 	if err != nil {
 		t.Fatalf("Failed to create LogExecutioner: %v", err)
 	}

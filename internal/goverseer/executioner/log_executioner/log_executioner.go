@@ -1,4 +1,4 @@
-package executioner
+package log_executioner
 
 import (
 	"fmt"
@@ -10,11 +10,6 @@ import (
 const (
 	// DefaultTag is the default tag to add to the logs
 	DefaultTag = ""
-)
-
-var (
-	// Ensure this implements the Executioner interface
-	_ Executioner = (*LogExecutioner)(nil)
 )
 
 // LogExecutionerConfig is the configuration for a log executioner
@@ -49,8 +44,8 @@ type LogExecutioner struct {
 	log *slog.Logger
 }
 
-// newLogExecutioner creates a new LogExecutioner based on the config
-func newLogExecutioner(cfg config.Config, log *slog.Logger) (*LogExecutioner, error) {
+// New creates a new LogExecutioner based on the config
+func New(cfg config.Config, log *slog.Logger) (*LogExecutioner, error) {
 	lcfg, err := ParseConfig(cfg.Executioner.Config)
 	if err != nil {
 		return nil, err

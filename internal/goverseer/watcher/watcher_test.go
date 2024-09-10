@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +27,7 @@ func TestWatcher_New(t *testing.T) {
 	// A valid configuration should not return an error
 	watcher, err := New(cfg)
 	assert.NoError(t, err)
-	assert.IsType(t, &TimeWatcher{}, watcher)
+	assert.IsType(t, &time_watcher.TimeWatcher{}, watcher)
 
 	// An invalid configuration should return an error
 	cfg.Watcher.Type = "foo"

@@ -7,6 +7,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/executioner/log_executioner"
 )
 
 // Executioner is an interface for executing actions
@@ -19,14 +20,14 @@ type Executioner interface {
 // It returns an Executioner based on the config or an error
 func New(cfg *config.Config) (Executioner, error) {
 	// Setup the logger
-	log := slog.
+	logger := slog.
 		New(tint.NewHandler(os.Stdout, nil)).
 		With("overseer", cfg.Name).
 		With("executioner", cfg.Executioner.Type)
 
 	switch cfg.Executioner.Type {
 	case "log":
-		return newLogExecutioner(*cfg, log)
+		return log_executioner.New(*cfg, logger)
 	default:
 		return nil, fmt.Errorf("unknown executioner type: %s", cfg.Executioner.Type)
 	}

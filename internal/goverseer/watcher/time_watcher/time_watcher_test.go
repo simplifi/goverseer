@@ -1,4 +1,4 @@
-package watcher
+package time
 
 import (
 	"log/slog"
@@ -65,7 +65,7 @@ func TestTimeWatcher_Watch(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	// Create a new TimeWatcher
-	watcher, err := newTimeWatcher(cfg, log)
+	watcher, err := New(cfg, log)
 	assert.NoError(t, err)
 	t.Log(watcher.PollInterval)
 	// Start watching the file
