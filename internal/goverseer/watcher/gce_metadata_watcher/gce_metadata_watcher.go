@@ -250,6 +250,12 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 
 				w.log.Error("error getting metadata",
 					tint.Err(err))
+
+				// Usually getMetadata opens up a connection to the metadata server
+				// and waits for a change. If there is an error we want to wait for a
+				// bit before trying again to prevent hammering the metadata server.
+				// Since we're in a for loop here the retrys will come VERY fast without
+				// this sleep.
 				time.Sleep(w.MetadataErrorWait)
 				continue
 			}
