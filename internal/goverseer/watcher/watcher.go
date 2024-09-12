@@ -7,6 +7,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/watcher/gce_metadata_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
 )
 
@@ -28,6 +29,8 @@ func New(cfg *config.Config) (Watcher, error) {
 	switch cfg.Watcher.Type {
 	case "time":
 		return time_watcher.New(*cfg, logger)
+	case "gce_metadata":
+		return gce_metadata_watcher.New(*cfg, logger)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}
