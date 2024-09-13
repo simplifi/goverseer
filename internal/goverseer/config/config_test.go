@@ -23,7 +23,7 @@ executioner:
     tag: test
 `
 	// testConfigWatcherToLogNoConfig is a basic test configuration for a time
-	// wathcer and a log executioner with no configuration provided
+	// watcher and a log executioner with no configuration provided
 	testConfigWatcherToLogNoConfig = `
 name: WatcherToLog
 watcher:
