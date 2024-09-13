@@ -104,7 +104,7 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 		select {
 		case <-w.stop:
 			return
-		default:
+		case <-time.After(w.PollInterval):
 			info, err := os.Stat(w.Path)
 			if err != nil {
 				w.log.Error("error getting file info",
