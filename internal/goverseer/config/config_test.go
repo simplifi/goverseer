@@ -72,7 +72,7 @@ func TestFromFile(t *testing.T) {
 	assert.NoError(t, err,
 		"Parsing a config file with no Configs should not error")
 	assert.Equal(t, map[string]interface{}(nil), config.Executioner.Config,
-		"An executor with no Config should have an empty map for the value")
+		"An executioner with no Config should have an empty map for the value")
 	assert.Equal(t, map[string]interface{}(nil), config.Watcher.Config,
 		"A watcher with no Config should have an empty map for the value")
 }
