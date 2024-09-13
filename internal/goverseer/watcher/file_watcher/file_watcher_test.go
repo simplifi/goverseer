@@ -125,7 +125,8 @@ func TestFileWatcher_Watch(t *testing.T) {
 		Watcher: config.WatcherConfig{
 			Type: "file",
 			Config: map[string]interface{}{
-				"path": testFilePath,
+				"path":         testFilePath,
+				"poll_seconds": 1, // Set a short poll interval for testing
 			},
 		},
 		Executioner: config.ExecutionerConfig{},
