@@ -22,10 +22,12 @@ file. The following configuration options are available:
 ```yaml
 name: shell_executioner_example
 watcher:
-  time:
+  type: time
+  config:
     poll_seconds: 60
 executioner:
-  shell:
+  type: shell
+  config:
     command: echo "Data received: $GOVERSEER_DATA"
     shell: /bin/bash
 ```

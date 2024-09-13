@@ -29,11 +29,12 @@ config file. The following configuration options are available:
 ```yaml
 name: gce_metadata_watcher_example
 watcher:
-  gce_metadata:
+  type: gce_metadata
+  config:
     key: instance/attributes/my-key
     recursive: true
 executioner:
-  log:
+  type: log
 ```
 
 **Note:**

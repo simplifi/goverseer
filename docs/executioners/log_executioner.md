@@ -17,7 +17,8 @@ following configuration option is available:
 
 ```yaml
 executioner:
-  log:
+  type: log
+  config:
     tag: my-application
 ```
 

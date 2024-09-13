@@ -15,10 +15,11 @@ following configuration option is available:
 
 ```yaml
 watcher:
-  time:
+  type: time
+  config:
     poll_seconds: 60
 executioner:
-  log:
+  type: log
 ```
 
 This configuration would trigger the executioner every 60 seconds.
