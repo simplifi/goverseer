@@ -14,10 +14,12 @@ const (
 	testConfigWatcherToLog = `
 name: WatcherToLog
 watcher:
-  time:
+  type: time
+  config:
     poll_seconds: 1
 executioner:
-  log:
+  type: log
+  config:
     tag: test
 `
 )
