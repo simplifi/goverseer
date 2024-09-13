@@ -13,7 +13,7 @@ type WatcherConfig struct {
 
 	// Config is the configuration for the watcher
 	// The config values will be parsed by the watcher
-	Config interface{}
+	Config map[string]interface{}
 }
 
 // ExecutionerConfig is a custom type that handles dynamic unmarshalling
@@ -23,7 +23,7 @@ type ExecutionerConfig struct {
 
 	// Config is the configuration for the watcher
 	// The config values will be parsed by the watcher
-	Config interface{}
+	Config map[string]interface{}
 }
 
 // Config is the configuration for a watcher and executioner
