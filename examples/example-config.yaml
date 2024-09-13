@@ -2,9 +2,11 @@
 name: example
 
 watcher:
-  time:
+  type: time
+  config:
     poll_seconds: 1
 
 executioner:
-  log:
-    tag: example
+  type: log
+  config:
+   tag: example

@@ -16,24 +16,6 @@ type WatcherConfig struct {
 	Config interface{}
 }
 
-// UnmarshalYAML implements the yaml.Unmarshaler interface for WatcherConfig
-// Because we want to have the type parsed from the yaml node rather than having
-// to specify a watcher.type node in the config we need custom unmarshalling
-func (d *WatcherConfig) UnmarshalYAML(value *yaml.Node) error {
-	var raw map[string]interface{}
-	if err := value.Decode(&raw); err != nil {
-		return err
-	}
-
-	for k, v := range raw {
-		d.Type = k
-		d.Config = v
-		break
-	}
-
-	return nil
-}
-
 // ExecutionerConfig is a custom type that handles dynamic unmarshalling
 type ExecutionerConfig struct {
 	// Type is the type of executioner
@@ -42,24 +24,6 @@ type ExecutionerConfig struct {
 	// Config is the configuration for the watcher
 	// The config values will be parsed by the watcher
 	Config interface{}
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface for WatcherConfig
-// Because we want to have the type parsed from the yaml node rather than having
-// to specify a watcher.type node in the config we need custom unmarshalling
-func (d *ExecutionerConfig) UnmarshalYAML(value *yaml.Node) error {
-	var raw map[string]interface{}
-	if err := value.Decode(&raw); err != nil {
-		return err
-	}
-
-	for k, v := range raw {
-		d.Type = k
-		d.Config = v
-		break
-	}
-
-	return nil
 }
 
 // Config is the configuration for a watcher and executioner
