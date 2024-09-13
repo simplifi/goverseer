@@ -22,6 +22,15 @@ executioner:
   config:
     tag: test
 `
+	// testConfigWatcherToLogNoConfig is a basic test configuration for a time
+	// wathcer and a log executioner with no configuration provided
+	testConfigWatcherToLogNoConfig = `
+name: WatcherToLog
+watcher:
+  type: time
+executioner:
+  type: log
+`
 )
 
 // writeTestConfigs writes test configurations to a temporary directory
@@ -56,4 +65,14 @@ func TestFromFile(t *testing.T) {
 	// Check the executioner config
 	assert.Equal(t, "log", config.Executioner.Type)
 	assert.IsType(t, map[string]interface{}{"tag": "test"}, config.Executioner.Config)
+
+	// Test with a config that's missing non-required Configs
+	_, testConfig = writeTestConfigs(t, testConfigWatcherToLogNoConfig)
+	config, err = FromFile(testConfig)
+	assert.NoError(t, err,
+		"Parsing a config file with no Configs should not error")
+	assert.Equal(t, map[string]interface{}(nil), config.Executioner.Config,
+		"An executor with no Config should have an empty map for the value")
+	assert.Equal(t, map[string]interface{}(nil), config.Watcher.Config,
+		"A watcher with no Config should have an empty map for the value")
 }
