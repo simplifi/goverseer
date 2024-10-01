@@ -13,20 +13,20 @@ const (
 )
 
 // LogExecutionerConfig is the configuration for a log executioner
-type LogExecutionerConfig struct {
+type Config struct {
 	// Tag is a tag to add to the logs, by default it is empty
 	Tag string
 }
 
 // ParseConfig parses the config for a log executioner
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*LogExecutionerConfig, error) {
+func ParseConfig(config interface{}) (*Config, error) {
 	cfgMap, ok := config.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid config")
 	}
 
-	lec := &LogExecutionerConfig{
+	lec := &Config{
 		Tag: DefaultTag,
 	}
 
@@ -40,6 +40,8 @@ func ParseConfig(config interface{}) (*LogExecutionerConfig, error) {
 // LogExecutioner logs the data to stdout
 // It implements the Executioner interface
 type LogExecutioner struct {
+	Config
+
 	// log is the logger
 	log *slog.Logger
 }

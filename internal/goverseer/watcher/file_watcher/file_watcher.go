@@ -15,8 +15,8 @@ const (
 	DefaultPollSeconds = 5
 )
 
-// FileWatcherConfig is the configuration for a file watcher
-type FileWatcherConfig struct {
+// Config is the configuration for a file watcher
+type Config struct {
 	// Path is the path to the file to watch
 	Path string
 
@@ -26,13 +26,13 @@ type FileWatcherConfig struct {
 
 // ParseConfig parses the config for a file watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*FileWatcherConfig, error) {
+func ParseConfig(config interface{}) (*Config, error) {
 	cfgMap, ok := config.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid config")
 	}
 
-	cfg := &FileWatcherConfig{
+	cfg := &Config{
 		PollSeconds: DefaultPollSeconds,
 	}
 
@@ -63,11 +63,7 @@ func ParseConfig(config interface{}) (*FileWatcherConfig, error) {
 
 // FileWatcher watches a file for changes and sends the path thru change channel
 type FileWatcher struct {
-	// Path is the path to the file to watch
-	Path string
-
-	// PollInterval is the interval to poll the file for changes
-	PollInterval time.Duration
+	Config
 
 	// lastValue is the last time the file was modified
 	lastValue time.Time
@@ -87,11 +83,13 @@ func New(cfg config.Config, log *slog.Logger) (*FileWatcher, error) {
 	}
 
 	return &FileWatcher{
-		Path:         tcfg.Path,
-		PollInterval: time.Duration(tcfg.PollSeconds) * time.Second,
-		lastValue:    time.Now(),
-		log:          log,
-		stop:         make(chan struct{}),
+		Config: Config{
+			Path:        tcfg.Path,
+			PollSeconds: tcfg.PollSeconds,
+		},
+		lastValue: time.Now(),
+		log:       log,
+		stop:      make(chan struct{}),
 	}, nil
 }
 
@@ -104,7 +102,7 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 		select {
 		case <-w.stop:
 			return
-		case <-time.After(w.PollInterval):
+		case <-time.After(time.Duration(w.PollSeconds) * time.Second):
 			info, err := os.Stat(w.Path)
 			if err != nil {
 				w.log.Error("error getting file info",

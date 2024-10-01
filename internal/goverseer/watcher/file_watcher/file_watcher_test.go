@@ -35,7 +35,7 @@ func touchFile(t *testing.T, filename string) {
 }
 
 func TestParseConfig(t *testing.T) {
-	var parsedConfig *FileWatcherConfig
+	var parsedConfig *Config
 	var err error
 
 	parsedConfig, err = ParseConfig(map[string]interface{}{
@@ -172,11 +172,13 @@ func TestFileWatcher_Stop(t *testing.T) {
 	touchFile(t, testFilePath)
 
 	watcher := FileWatcher{
-		Path:         testFilePath,
-		PollInterval: 1 * time.Second,
-		lastValue:    time.Now(),
-		log:          log,
-		stop:         make(chan struct{}),
+		Config: Config{
+			Path:        testFilePath,
+			PollSeconds: 1,
+		},
+		lastValue: time.Now(),
+		log:       log,
+		stop:      make(chan struct{}),
 	}
 
 	changes := make(chan interface{})

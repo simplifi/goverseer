@@ -17,7 +17,7 @@ import (
 
 // TestParseConfig tests the ParseConfig function
 func TestParseConfig(t *testing.T) {
-	var parsedConfig *GceMetadataWatcherConfig
+	var parsedConfig *Config
 
 	testKey := "valid"
 	parsedConfig, err := ParseConfig(map[string]interface{}{
@@ -203,13 +203,15 @@ func TestGceMetadataWatcher_Watch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	watcher := GceMetadataWatcher{
-		Key:               "test",
-		Recursive:         true,
-		MetadataUrl:       mockServer.URL,
-		MetadataErrorWait: 1 * time.Second,
-		log:               log,
-		ctx:               ctx,
-		cancel:            cancel,
+		Config: Config{
+			Key:                      "test",
+			Recursive:                true,
+			MetadataUrl:              mockServer.URL,
+			MetadataErrorWaitSeconds: 1,
+		},
+		log:    log,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	changes := make(chan interface{})
@@ -253,13 +255,15 @@ func TestGceMetadataWatcher_Stop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	watcher := GceMetadataWatcher{
-		Key:               "test",
-		Recursive:         true,
-		MetadataUrl:       mockServer.URL,
-		MetadataErrorWait: 1 * time.Second,
-		log:               log,
-		ctx:               ctx,
-		cancel:            cancel,
+		Config: Config{
+			Key:                      "test",
+			Recursive:                true,
+			MetadataUrl:              mockServer.URL,
+			MetadataErrorWaitSeconds: 1,
+		},
+		log:    log,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	changes := make(chan interface{})

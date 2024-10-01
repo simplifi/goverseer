@@ -22,8 +22,8 @@ const (
 	DefaultShell = "/bin/sh"
 )
 
-// ShellExecutionerConfig is the configuration for a shell executioner
-type ShellExecutionerConfig struct {
+// Config is the configuration for a shell executioner
+type Config struct {
 	// Command is the command to execute
 	Command string
 
@@ -33,13 +33,13 @@ type ShellExecutionerConfig struct {
 
 // ParseConfig parses the config for a log executioner
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*ShellExecutionerConfig, error) {
+func ParseConfig(config interface{}) (*Config, error) {
 	cfgMap, ok := config.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid config")
 	}
 
-	cfg := &ShellExecutionerConfig{
+	cfg := &Config{
 		Shell: DefaultShell,
 	}
 
@@ -73,11 +73,7 @@ func ParseConfig(config interface{}) (*ShellExecutionerConfig, error) {
 // ShellExecutioner runs a shell command
 // It implements the Executioner interface
 type ShellExecutioner struct {
-	// Command is the command to execute
-	Command string
-
-	// Shell is the shell to use when executing the command
-	Shell string
+	Config
 
 	// workDir is the directory in which the ShellExecutioner will store
 	// the command to run and the data to pass into the command
@@ -112,8 +108,10 @@ func New(cfg config.Config, log *slog.Logger) (*ShellExecutioner, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ShellExecutioner{
-		Command: pcfg.Command,
-		Shell:   pcfg.Shell,
+		Config: Config{
+			Command: pcfg.Command,
+			Shell:   pcfg.Shell,
+		},
 		workDir: workDir,
 		log:     log,
 		stop:    make(chan struct{}),
