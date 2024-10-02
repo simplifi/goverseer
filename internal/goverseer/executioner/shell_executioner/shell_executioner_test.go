@@ -13,7 +13,7 @@ import (
 )
 
 func TestParseConfig(t *testing.T) {
-	var parsedConfig *ShellExecutionerConfig
+	var parsedConfig *Config
 
 	parsedConfig, err := ParseConfig(map[string]interface{}{
 		"command": "echo 123",
@@ -125,8 +125,10 @@ func TestShellExecutioner_Execute(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
-		Command: "echo ${GOVERSEER_DATA}",
-		Shell:   DefaultShell,
+		Config: Config{
+			Command: "echo ${GOVERSEER_DATA}",
+			Shell:   DefaultShell,
+		},
 		workDir: tempDir,
 		log:     log,
 		stop:    make(chan struct{}),
@@ -144,8 +146,10 @@ func TestShellExecutioner_Stop(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
-		Command: "for i in {1..1000}; do echo $i; sleep 1; done",
-		Shell:   DefaultShell,
+		Config: Config{
+			Command: "for i in {1..1000}; do echo $i; sleep 1; done",
+			Shell:   DefaultShell,
+		},
 		workDir: tempDir,
 		log:     log,
 		stop:    make(chan struct{}),

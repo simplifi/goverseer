@@ -14,20 +14,20 @@ const (
 )
 
 // TimeWatcherConfig is the configuration for a time watcher
-type TimeWatcherConfig struct {
+type Config struct {
 	// PollSeconds is the number of seconds to wait between ticks
 	PollSeconds int
 }
 
 // ParseConfig parses the config for a time watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*TimeWatcherConfig, error) {
+func ParseConfig(config interface{}) (*Config, error) {
 	cfgMap, ok := config.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid config")
 	}
 
-	twc := &TimeWatcherConfig{
+	twc := &Config{
 		PollSeconds: DefaultPollSeconds,
 	}
 
@@ -45,8 +45,7 @@ func ParseConfig(config interface{}) (*TimeWatcherConfig, error) {
 
 // TimeWatcher is a time watcher that ticks at a regular interval
 type TimeWatcher struct {
-	// PollInterval is the interval to to wait between ticks
-	PollInterval time.Duration
+	Config
 
 	// log is the logger
 	log *slog.Logger
@@ -63,9 +62,11 @@ func New(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
 	}
 
 	return &TimeWatcher{
-		PollInterval: time.Duration(tcfg.PollSeconds) * time.Second,
-		log:          log,
-		stop:         make(chan struct{}),
+		Config: Config{
+			PollSeconds: tcfg.PollSeconds,
+		},
+		log:  log,
+		stop: make(chan struct{}),
 	}, nil
 }
 
@@ -77,7 +78,7 @@ func (w *TimeWatcher) Watch(change chan interface{}) {
 		select {
 		case <-w.stop:
 			return
-		case value := <-time.After(w.PollInterval):
+		case value := <-time.After(time.Duration(w.PollSeconds) * time.Second):
 			w.log.Info("time watcher tick", slog.Time("value", value))
 			change <- value
 		}

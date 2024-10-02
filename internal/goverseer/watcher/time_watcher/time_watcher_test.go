@@ -67,7 +67,7 @@ func TestTimeWatcher_Watch(t *testing.T) {
 	// Create a new TimeWatcher
 	watcher, err := New(cfg, log)
 	assert.NoError(t, err)
-	t.Log(watcher.PollInterval)
+	t.Log(watcher.PollSeconds)
 	// Start watching the file
 	wg.Add(1)
 	go func() {

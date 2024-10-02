@@ -34,8 +34,8 @@ const (
 	DefaultMetadataErrorWaitSeconds = 1
 )
 
-// GceMetadataWatcherConfig is the configuration for a GCE metadata watcher
-type GceMetadataWatcherConfig struct {
+// Config is the configuration for a GCE metadata watcher
+type Config struct {
 	// Source is the metadata source to watch
 	// Valid values are 'instance' and 'project'
 	// Default is 'instance'
@@ -63,13 +63,13 @@ type GceMetadataWatcherConfig struct {
 
 // ParseConfig parses the config for the watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*GceMetadataWatcherConfig, error) {
+func ParseConfig(config interface{}) (*Config, error) {
 	cfgMap, ok := config.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid config")
 	}
 
-	cfg := &GceMetadataWatcherConfig{
+	cfg := &Config{
 		Source:                   DefaultSource,
 		Recursive:                DefaultRecursive,
 		MetadataUrl:              DefaultMetadataUrl,
@@ -134,18 +134,7 @@ func ParseConfig(config interface{}) (*GceMetadataWatcherConfig, error) {
 }
 
 type GceMetadataWatcher struct {
-	// Key is the key to watch in the GCE metadata
-	Key string
-
-	// Recursive is whether to recurse the metadata keys
-	Recursive bool
-
-	// MetadataUrl is the URL this watcher will use when reading from the GCE
-	// metadata server
-	MetadataUrl string
-
-	// MetadataErrorWait is the time to wait before trying failed metadata request
-	MetadataErrorWait time.Duration
+	Config
 
 	// lastETag is the last etag, used to compare changes
 	lastETag string
@@ -170,13 +159,15 @@ func New(cfg config.Config, log *slog.Logger) (*GceMetadataWatcher, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &GceMetadataWatcher{
-		Key:               pcfg.Key,
-		Recursive:         pcfg.Recursive,
-		MetadataUrl:       pcfg.MetadataUrl,
-		MetadataErrorWait: time.Duration(pcfg.MetadataErrorWaitSeconds) * time.Second,
-		log:               log,
-		ctx:               ctx,
-		cancel:            cancel,
+		Config: Config{
+			Key:                      pcfg.Key,
+			Recursive:                pcfg.Recursive,
+			MetadataUrl:              pcfg.MetadataUrl,
+			MetadataErrorWaitSeconds: pcfg.MetadataErrorWaitSeconds,
+		},
+		log:    log,
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
@@ -256,7 +247,7 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 				// bit before trying again to prevent hammering the metadata server.
 				// Since we're in a for loop here the retrys will come VERY fast without
 				// this sleep.
-				time.Sleep(w.MetadataErrorWait)
+				time.Sleep(time.Duration(w.MetadataErrorWaitSeconds) * time.Second)
 				continue
 			}
 
