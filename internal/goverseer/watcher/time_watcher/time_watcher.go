@@ -2,9 +2,9 @@ package time_watcher
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
@@ -47,15 +47,12 @@ func ParseConfig(config interface{}) (*Config, error) {
 type TimeWatcher struct {
 	Config
 
-	// log is the logger
-	log *slog.Logger
-
 	// stop is a channel to signal the watcher to stop
 	stop chan struct{}
 }
 
 // New creates a new TimeWatcher based on the config
-func New(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
+func New(cfg config.Config) (*TimeWatcher, error) {
 	tcfg, err := ParseConfig(cfg.Watcher.Config)
 	if err != nil {
 		return nil, err
@@ -65,7 +62,6 @@ func New(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
 		Config: Config{
 			PollSeconds: tcfg.PollSeconds,
 		},
-		log:  log,
 		stop: make(chan struct{}),
 	}, nil
 }
@@ -73,13 +69,13 @@ func New(cfg config.Config, log *slog.Logger) (*TimeWatcher, error) {
 // Watch ticks at regular intervals, sending the time to the changes channel
 // The changes channel is where the path to the file is sent when it changes
 func (w *TimeWatcher) Watch(change chan interface{}) {
-	w.log.Info("starting watcher")
+	log.Info("starting watcher")
 	for {
 		select {
 		case <-w.stop:
 			return
 		case value := <-time.After(time.Duration(w.PollSeconds) * time.Second):
-			w.log.Info("time watcher tick", slog.Time("value", value))
+			log.Info("time watcher tick", "value", value)
 			change <- value
 		}
 	}
@@ -87,6 +83,6 @@ func (w *TimeWatcher) Watch(change chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *TimeWatcher) Stop() {
-	w.log.Info("shutting down watcher")
+	log.Info("shutting down watcher")
 	close(w.stop)
 }

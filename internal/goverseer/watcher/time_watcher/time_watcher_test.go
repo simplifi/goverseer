@@ -1,13 +1,10 @@
 package time_watcher
 
 import (
-	"log/slog"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +45,6 @@ func TestTimeWatcher_ParseConfig(t *testing.T) {
 
 // TestTimeWatcher_Watch tests the Watch function
 func TestTimeWatcher_Watch(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	cfg := config.Config{
 		Name: "TestConfig",
 		Watcher: config.WatcherConfig{
@@ -65,7 +61,7 @@ func TestTimeWatcher_Watch(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	// Create a new TimeWatcher
-	watcher, err := New(cfg, log)
+	watcher, err := New(cfg)
 	assert.NoError(t, err)
 	t.Log(watcher.PollSeconds)
 	// Start watching the file

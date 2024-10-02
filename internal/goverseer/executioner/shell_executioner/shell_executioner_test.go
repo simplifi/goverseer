@@ -2,12 +2,10 @@ package shell_executioner
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -101,7 +99,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 	}
-	executioner, err := New(cfg, slog.Default())
+	executioner, err := New(cfg)
 	assert.NoError(t, err,
 		"Creating a new ShellExecutioner should not return an error")
 	assert.NotNil(t, executioner,
@@ -113,7 +111,7 @@ func TestNew(t *testing.T) {
 			Type: "shell",
 		},
 	}
-	executioner, err = New(cfg, slog.Default())
+	executioner, err = New(cfg)
 	assert.Error(t, err,
 		"Creating a new ShellExecutioner with an invalid config should return an error")
 	assert.Nil(t, executioner,
@@ -121,7 +119,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestShellExecutioner_Execute(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
@@ -130,7 +127,6 @@ func TestShellExecutioner_Execute(t *testing.T) {
 			Shell:   DefaultShell,
 		},
 		workDir: tempDir,
-		log:     log,
 		stop:    make(chan struct{}),
 		ctx:     ctx,
 		cancel:  cancel,
@@ -142,7 +138,6 @@ func TestShellExecutioner_Execute(t *testing.T) {
 }
 
 func TestShellExecutioner_Stop(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
@@ -151,7 +146,6 @@ func TestShellExecutioner_Stop(t *testing.T) {
 			Shell:   DefaultShell,
 		},
 		workDir: tempDir,
-		log:     log,
 		stop:    make(chan struct{}),
 		ctx:     ctx,
 		cancel:  cancel,

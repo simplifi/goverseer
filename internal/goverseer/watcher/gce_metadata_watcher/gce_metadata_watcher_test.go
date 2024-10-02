@@ -2,15 +2,12 @@ package gce_metadata_watcher
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -165,7 +162,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 	}
-	watcher, err := New(cfg, nil)
+	watcher, err := New(cfg)
 	assert.NoError(t, err,
 		"Creating a new GceMetadataWatcher should not return an error")
 	assert.NotNil(t, watcher,
@@ -180,7 +177,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 	}
-	watcher, err = New(cfg, nil)
+	watcher, err = New(cfg)
 	assert.Error(t, err,
 		"Creating a new GceMetadataWatcher with an invalid config should return an error")
 	assert.Nil(t, watcher,
@@ -188,7 +185,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestGceMetadataWatcher_Watch(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	mockResponseChan := make(chan struct{})
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Wait for a signal, this is used to simulate a change in the metadata
@@ -209,7 +205,6 @@ func TestGceMetadataWatcher_Watch(t *testing.T) {
 			MetadataUrl:              mockServer.URL,
 			MetadataErrorWaitSeconds: 1,
 		},
-		log:    log,
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -240,7 +235,6 @@ func TestGceMetadataWatcher_Watch(t *testing.T) {
 }
 
 func TestGceMetadataWatcher_Stop(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
 	mockResponseChan := make(chan struct{})
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Wait for a signal, this is used to simulate a change in the metadata
@@ -261,7 +255,6 @@ func TestGceMetadataWatcher_Stop(t *testing.T) {
 			MetadataUrl:              mockServer.URL,
 			MetadataErrorWaitSeconds: 1,
 		},
-		log:    log,
 		ctx:    ctx,
 		cancel: cancel,
 	}

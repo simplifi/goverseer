@@ -2,11 +2,10 @@ package file_watcher
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"time"
 
-	"github.com/lmittmann/tint"
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
@@ -68,15 +67,12 @@ type FileWatcher struct {
 	// lastValue is the last time the file was modified
 	lastValue time.Time
 
-	// log is the logger
-	log *slog.Logger
-
 	// stop is a channel to signal the watcher to stop
 	stop chan struct{}
 }
 
 // New creates a new FileWatcher based on the config
-func New(cfg config.Config, log *slog.Logger) (*FileWatcher, error) {
+func New(cfg config.Config) (*FileWatcher, error) {
 	tcfg, err := ParseConfig(cfg.Watcher.Config)
 	if err != nil {
 		return nil, err
@@ -88,7 +84,6 @@ func New(cfg config.Config, log *slog.Logger) (*FileWatcher, error) {
 			PollSeconds: tcfg.PollSeconds,
 		},
 		lastValue: time.Now(),
-		log:       log,
 		stop:      make(chan struct{}),
 	}, nil
 }
@@ -96,7 +91,7 @@ func New(cfg config.Config, log *slog.Logger) (*FileWatcher, error) {
 // Watch watches the file for changes and sends the path to the changes channel
 // The changes channel is where the path to the file is sent when it changes
 func (w *FileWatcher) Watch(changes chan interface{}) {
-	w.log.Info("starting watcher")
+	log.Info("starting watcher")
 
 	for {
 		select {
@@ -105,13 +100,14 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 		case <-time.After(time.Duration(w.PollSeconds) * time.Second):
 			info, err := os.Stat(w.Path)
 			if err != nil {
-				w.log.Error("error getting file info",
-					slog.String("path", w.Path), tint.Err(err))
+				log.Error("error getting file info",
+					"path", w.Path,
+					"err", err)
 			}
 			if err == nil && info.ModTime().After(w.lastValue) {
-				w.log.Info("file changed",
-					slog.String("path", w.Path),
-					slog.Time("mod_time", info.ModTime()))
+				log.Info("file changed",
+					"path", w.Path,
+					"mod_time", info.ModTime())
 				w.lastValue = info.ModTime()
 				changes <- w.Path
 			}
@@ -121,6 +117,6 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *FileWatcher) Stop() {
-	w.log.Info("shutting down watcher")
+	log.Info("shutting down watcher")
 	close(w.stop)
 }

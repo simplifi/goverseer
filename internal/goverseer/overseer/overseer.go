@@ -1,11 +1,9 @@
 package overseer
 
 import (
-	"log/slog"
-	"os"
 	"sync"
 
-	"github.com/lmittmann/tint"
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/simplifi/goverseer/internal/goverseer/executioner"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher"
@@ -21,9 +19,6 @@ type Overseer struct {
 	// executioner is the executioner
 	executioner executioner.Executioner
 
-	// log is the logger
-	log *slog.Logger
-
 	// change is the channel through which we send changes from the watcher to the executioner
 	change chan interface{}
 
@@ -36,11 +31,6 @@ type Overseer struct {
 
 // New creates a new Overseer
 func New(cfg *config.Config) (*Overseer, error) {
-	// Setup the logger
-	log := slog.
-		New(tint.NewHandler(os.Stdout, nil)).
-		With("overseer", cfg.Name)
-
 	watcher, err := watcher.New(cfg)
 	if err != nil {
 		return nil, err
@@ -54,7 +44,6 @@ func New(cfg *config.Config) (*Overseer, error) {
 	o := &Overseer{
 		watcher:     watcher,
 		executioner: executioner,
-		log:         log,
 		change:      make(chan interface{}),
 		stop:        make(chan struct{}),
 	}
@@ -80,7 +69,7 @@ func (o *Overseer) Run() {
 			go func() {
 				defer o.waitGroup.Done()
 				if err := o.executioner.Execute(data); err != nil {
-					o.log.Error("error running executioner", tint.Err(err))
+					log.Error("error running executioner", "err", err)
 				}
 			}()
 		}
@@ -89,14 +78,14 @@ func (o *Overseer) Run() {
 
 // Stop signals the overseer to stop
 func (o *Overseer) Stop() {
-	o.log.Info("shutting down overseer")
+	log.Info("shutting down overseer")
 	close(o.stop)
 	o.watcher.Stop()
 	o.executioner.Stop()
 
-	o.log.Info("waiting for overseer to finish")
+	log.Info("waiting for overseer to finish")
 	// Wait here so we don't close the changes channel before the executioner is done
 	o.waitGroup.Wait()
-	o.log.Info("done")
+	log.Info("done")
 	close(o.change)
 }
