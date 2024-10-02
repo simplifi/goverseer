@@ -16,6 +16,12 @@ file. The following configuration options are available:
   `echo "Data received: $GOVERSEER_DATA"`.
 - `shell`: (Optional) This specifies the shell to use for executing the command.
   Defaults to `/bin/sh` if not provided.
+- `work_dir`: (Optional) This specifies the directory where the executioner
+  stores the data file. Defaults to the `/tmp` if not provided.
+- `persist_data`: (Optional) This determines whether the command and data will
+  persist after completion. This can be useful to enable when troubleshooting
+  configured commands but should generally remain disabled otherwise. Defaults
+  to `false` if not provided.
 
 **Example Configuration:**
 

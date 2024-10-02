@@ -19,6 +19,13 @@ const (
 
 	// DefaultShell is the default shell to use when executing a command
 	DefaultShell = "/bin/sh"
+
+	// DefaultWorkDir is the default value for the work directory
+	DefaultWorkDir = "/tmp"
+
+	// DefaultPersistData is the default value for whether the command and data
+	// will persist after completion
+	DefaultPersistData = false
 )
 
 // Config is the configuration for a shell executioner
@@ -28,6 +35,16 @@ type Config struct {
 
 	// Shell is the shell to use when executing the command
 	Shell string
+
+	// WorkDir is the directory in which the ShellExecutioner will store
+	// the command to run and the data to pass into the command
+	WorkDir string
+
+	// PersistWorkDir determines whether the command and data will persist after
+	// completion
+	// This can be useful to enable when troubleshooting configured commands but
+	// should generally remain disabled otherwise
+	PersistData bool
 }
 
 // ParseConfig parses the config for a log executioner
@@ -39,7 +56,9 @@ func ParseConfig(config interface{}) (*Config, error) {
 	}
 
 	cfg := &Config{
-		Shell: DefaultShell,
+		Shell:       DefaultShell,
+		PersistData: DefaultPersistData,
+		WorkDir:     DefaultWorkDir,
 	}
 
 	// Command is required and must be a string
@@ -66,6 +85,27 @@ func ParseConfig(config interface{}) (*Config, error) {
 		}
 	}
 
+	// If persist_data is set, it should be a string
+	if cfgMap["persist_data"] != nil {
+		if persistData, ok := cfgMap["persist_data"].(bool); ok {
+			cfg.PersistData = persistData
+		} else if cfgMap["persist_data"] != nil {
+			return nil, fmt.Errorf("persist_data must be a boolean")
+		}
+	}
+
+	// If work_dir is set, it should be a string
+	if cfgMap["work_dir"] != nil {
+		if workDir, ok := cfgMap["work_dir"].(string); ok {
+			if workDir == "" {
+				return nil, fmt.Errorf("work_dir must not be empty")
+			}
+			cfg.WorkDir = workDir
+		} else if cfgMap["work_dir"] != nil {
+			return nil, fmt.Errorf("work_dir must be a string")
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -73,10 +113,6 @@ func ParseConfig(config interface{}) (*Config, error) {
 // It implements the Executioner interface
 type ShellExecutioner struct {
 	Config
-
-	// workDir is the directory in which the ShellExecutioner will store
-	// the command to run and the data to pass into the command
-	workDir string
 
 	// stop is a channel to signal the executor to stop
 	stop chan struct{}
@@ -95,23 +131,18 @@ func New(cfg config.Config) (*ShellExecutioner, error) {
 		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
 
-	// Create a temp directory to store the command and data
-	workDir, err := os.MkdirTemp("", fmt.Sprintf("goverseer-%s", cfg.Name))
-	if err != nil {
-		return nil, fmt.Errorf("error creating work dir: %w", err)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ShellExecutioner{
 		Config: Config{
-			Command: pcfg.Command,
-			Shell:   pcfg.Shell,
+			Command:     pcfg.Command,
+			Shell:       pcfg.Shell,
+			PersistData: pcfg.PersistData,
+			WorkDir:     pcfg.WorkDir,
 		},
-		workDir: workDir,
-		stop:    make(chan struct{}),
-		ctx:     ctx,
-		cancel:  cancel,
+		stop:   make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
@@ -143,8 +174,8 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
 
 // writeToWorkDir writes the data to a file in the temporary work directory
 // It returns the path to the file and an error if the data could not be written
-func (e *ShellExecutioner) writeToWorkDir(name string, data interface{}) (string, error) {
-	filePath := fmt.Sprintf("%s/%s", e.workDir, name)
+func (e *ShellExecutioner) writeToWorkDir(execWorkDir, name string, data interface{}) (string, error) {
+	filePath := fmt.Sprintf("%s/%s", execWorkDir, name)
 	if err := os.WriteFile(filePath, []byte(data.(string)), 0644); err != nil {
 		return "", fmt.Errorf("error writing file to work dir: %w", err)
 	}
@@ -159,18 +190,27 @@ func (e *ShellExecutioner) writeToWorkDir(name string, data interface{}) (string
 // the DataEnvVarName environment variable.
 // The command is started in the configured shell.
 func (e *ShellExecutioner) Execute(data interface{}) error {
-	var dataPath, commandPath string
+	var execWorkDir, dataPath, commandPath string
 	var err error
 
-	defer os.RemoveAll(e.workDir)
+	// Create a temp directory to store the command and data
+	if execWorkDir, err = os.MkdirTemp(e.WorkDir, "goverseer"); err != nil {
+		return fmt.Errorf("error creating work dir: %w", err)
+	}
+
+	if e.PersistData {
+		log.Warn("persisting data", "path", execWorkDir)
+	} else {
+		defer os.RemoveAll(execWorkDir)
+	}
 
 	// Write the data to a file in the work directory
-	if dataPath, err = e.writeToWorkDir("data", data); err != nil {
+	if dataPath, err = e.writeToWorkDir(execWorkDir, "data", data); err != nil {
 		return fmt.Errorf("error writing data to work dir: %w", err)
 	}
 
 	// Write the command to a file in the work directory
-	if commandPath, err = e.writeToWorkDir("command", e.Command); err != nil {
+	if commandPath, err = e.writeToWorkDir(execWorkDir, "command", e.Command); err != nil {
 		return fmt.Errorf("error writing command to work dir: %w", err)
 	}
 

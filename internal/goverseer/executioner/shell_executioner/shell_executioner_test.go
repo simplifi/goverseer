@@ -2,7 +2,6 @@ package shell_executioner
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -86,6 +85,44 @@ func TestParseConfig(t *testing.T) {
 	_, err = ParseConfig(map[string]interface{}{})
 	assert.Error(t, err,
 		"Parsing a config with no command should return an error")
+
+	// Test setting the work_dir
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"command":  "echo 123",
+		"work_dir": "/foo",
+	})
+	assert.NoError(t, err,
+		"Parsing a config with a valid work_dir should not return an error")
+	assert.Equal(t, "/foo", parsedConfig.WorkDir,
+		"WorkDir should be set to the value in the config")
+
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"command":  "echo 123",
+		"work_dir": nil,
+	})
+	assert.NoError(t, err,
+		"Parsing a config with a nil work_dir should not return an error")
+	assert.Equal(t, DefaultWorkDir, parsedConfig.WorkDir,
+		"Parsing a config with a nil work_dir should set default value")
+
+	// Test setting the persist_data
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"command":      "echo 123",
+		"persist_data": true,
+	})
+	assert.NoError(t, err,
+		"Parsing a config with a valid persist_data should not return an error")
+	assert.Equal(t, true, parsedConfig.PersistData,
+		"PersistData should be set to the value in the config")
+
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"command":      "echo 123",
+		"persist_data": nil,
+	})
+	assert.NoError(t, err,
+		"Parsing a config with a nil persist_data should not return an error")
+	assert.Equal(t, DefaultPersistData, parsedConfig.PersistData,
+		"Parsing a config with a nil persist_data should set default value")
 }
 
 func TestNew(t *testing.T) {
@@ -119,17 +156,15 @@ func TestNew(t *testing.T) {
 }
 
 func TestShellExecutioner_Execute(t *testing.T) {
-	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
 		Config: Config{
 			Command: "echo ${GOVERSEER_DATA}",
 			Shell:   DefaultShell,
 		},
-		workDir: tempDir,
-		stop:    make(chan struct{}),
-		ctx:     ctx,
-		cancel:  cancel,
+		stop:   make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	err := executioner.Execute("test_data")
@@ -138,17 +173,15 @@ func TestShellExecutioner_Execute(t *testing.T) {
 }
 
 func TestShellExecutioner_Stop(t *testing.T) {
-	tempDir, _ := os.MkdirTemp("", "goverseer-test")
 	ctx, cancel := context.WithCancel(context.Background())
 	executioner := ShellExecutioner{
 		Config: Config{
 			Command: "for i in {1..1000}; do echo $i; sleep 1; done",
 			Shell:   DefaultShell,
 		},
-		workDir: tempDir,
-		stop:    make(chan struct{}),
-		ctx:     ctx,
-		cancel:  cancel,
+		stop:   make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	go func() {
