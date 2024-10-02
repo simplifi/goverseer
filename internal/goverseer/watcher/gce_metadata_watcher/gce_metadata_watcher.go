@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/lmittmann/tint"
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
@@ -139,9 +138,6 @@ type GceMetadataWatcher struct {
 	// lastETag is the last etag, used to compare changes
 	lastETag string
 
-	// log is the logger
-	log *slog.Logger
-
 	// ctx is the context
 	ctx context.Context
 
@@ -150,7 +146,7 @@ type GceMetadataWatcher struct {
 }
 
 // New creates a new GceMetadataWatcher based on the passed config
-func New(cfg config.Config, log *slog.Logger) (*GceMetadataWatcher, error) {
+func New(cfg config.Config) (*GceMetadataWatcher, error) {
 	pcfg, err := ParseConfig(cfg.Watcher.Config)
 	if err != nil {
 		return nil, err
@@ -165,7 +161,6 @@ func New(cfg config.Config, log *slog.Logger) (*GceMetadataWatcher, error) {
 			MetadataUrl:              pcfg.MetadataUrl,
 			MetadataErrorWaitSeconds: pcfg.MetadataErrorWaitSeconds,
 		},
-		log:    log,
 		ctx:    ctx,
 		cancel: cancel,
 	}, nil
@@ -224,7 +219,7 @@ func (w *GceMetadataWatcher) getMetadata() (*gceMetadataResponse, error) {
 // Watch watches the GCE metadata for changes and sends value to changes channel
 // The changes channel is where the value is sent when it changes
 func (w *GceMetadataWatcher) Watch(change chan interface{}) {
-	w.log.Info("starting watcher")
+	log.Info("starting watcher")
 
 	for {
 		select {
@@ -239,8 +234,7 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 					continue
 				}
 
-				w.log.Error("error getting metadata",
-					tint.Err(err))
+				log.Error("error getting metadata", "err", err)
 
 				// Usually getMetadata opens up a connection to the metadata server
 				// and waits for a change. If there is an error we want to wait for a
@@ -253,7 +247,7 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 
 			// Only send a change if it has actually changed by comparing etags
 			if w.lastETag != gceMetadata.etag {
-				w.log.Info("change detected",
+				log.Info("change detected",
 					"key", w.Key,
 					"etag", gceMetadata.etag,
 					"previous_etag", w.lastETag)
@@ -268,6 +262,6 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *GceMetadataWatcher) Stop() {
-	w.log.Info("shutting down watcher")
+	log.Info("shutting down watcher")
 	w.cancel()
 }

@@ -1,14 +1,12 @@
 package file_watcher
 
 import (
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -91,7 +89,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 	}
-	watcher, err := New(cfg, nil)
+	watcher, err := New(cfg)
 	assert.NoError(t, err,
 		"Creating a new FileWatcher should not return an error")
 	assert.NotNil(t, watcher,
@@ -106,7 +104,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 	}
-	watcher, err = New(cfg, nil)
+	watcher, err = New(cfg)
 	assert.Error(t, err,
 		"Creating a new FileWatcher with an invalid config should return an error")
 	assert.Nil(t, watcher,
@@ -114,8 +112,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestFileWatcher_Watch(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-
 	// Create a temp file we can watch
 	testFilePath := filepath.Join(t.TempDir(), "test.txt")
 	touchFile(t, testFilePath)
@@ -137,7 +133,7 @@ func TestFileWatcher_Watch(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	// Create a new FileWatcher
-	watcher, err := New(cfg, log)
+	watcher, err := New(cfg)
 	assert.NoError(t, err)
 
 	// Start watching the file
@@ -165,8 +161,6 @@ func TestFileWatcher_Watch(t *testing.T) {
 }
 
 func TestFileWatcher_Stop(t *testing.T) {
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelError}))
-
 	// Create a temp file we can watch
 	testFilePath := filepath.Join(t.TempDir(), "test.txt")
 	touchFile(t, testFilePath)
@@ -177,7 +171,6 @@ func TestFileWatcher_Stop(t *testing.T) {
 			PollSeconds: 1,
 		},
 		lastValue: time.Now(),
-		log:       log,
 		stop:      make(chan struct{}),
 	}
 

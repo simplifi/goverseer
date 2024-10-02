@@ -2,10 +2,7 @@ package watcher
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
 
-	"github.com/lmittmann/tint"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/file_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/gce_metadata_watcher"
@@ -21,19 +18,13 @@ type Watcher interface {
 // New creates a new Watcher based on the config
 // The config is the watcher configuration
 func New(cfg *config.Config) (Watcher, error) {
-	// Setup the logger
-	logger := slog.
-		New(tint.NewHandler(os.Stdout, nil)).
-		With("overseer", cfg.Name).
-		With("watcher", cfg.Watcher.Type)
-
 	switch cfg.Watcher.Type {
 	case "file":
-		return file_watcher.New(*cfg, logger)
+		return file_watcher.New(*cfg)
 	case "time":
-		return time_watcher.New(*cfg, logger)
+		return time_watcher.New(*cfg)
 	case "gce_metadata":
-		return gce_metadata_watcher.New(*cfg, logger)
+		return gce_metadata_watcher.New(*cfg)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}

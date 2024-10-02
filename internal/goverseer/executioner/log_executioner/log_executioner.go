@@ -2,8 +2,9 @@ package log_executioner
 
 import (
 	"fmt"
-	"log/slog"
+	"os"
 
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
@@ -43,32 +44,28 @@ type LogExecutioner struct {
 	Config
 
 	// log is the logger
-	log *slog.Logger
+	log *log.Logger
 }
 
 // New creates a new LogExecutioner based on the config
-func New(cfg config.Config, log *slog.Logger) (*LogExecutioner, error) {
+func New(cfg config.Config) (*LogExecutioner, error) {
 	lcfg, err := ParseConfig(cfg.Executioner.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	if lcfg.Tag != "" {
-		log = log.With("tag", lcfg.Tag)
-	}
-
 	return &LogExecutioner{
-		log: log,
+		log: log.New(os.Stdout).With("tag", lcfg.Tag),
 	}, nil
 }
 
 // Execute logs the data to stdout
 func (e *LogExecutioner) Execute(data interface{}) error {
-	e.log.Info("received data", slog.String("data", fmt.Sprintf("%v", data)))
+	e.log.Info("received data", "data", fmt.Sprintf("%v", data))
 	return nil
 }
 
 // Stop signals the executioner to stop
 func (e *LogExecutioner) Stop() {
-	e.log.Info("shutting down executioner")
+	log.Info("shutting down executioner")
 }

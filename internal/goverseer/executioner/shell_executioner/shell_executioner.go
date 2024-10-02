@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 
-	"github.com/lmittmann/tint"
+	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 )
 
@@ -79,9 +78,6 @@ type ShellExecutioner struct {
 	// the command to run and the data to pass into the command
 	workDir string
 
-	// log is the logger
-	log *slog.Logger
-
 	// stop is a channel to signal the executor to stop
 	stop chan struct{}
 
@@ -93,7 +89,7 @@ type ShellExecutioner struct {
 }
 
 // New creates a new ShellExecutioner based on the config
-func New(cfg config.Config, log *slog.Logger) (*ShellExecutioner, error) {
+func New(cfg config.Config) (*ShellExecutioner, error) {
 	pcfg, err := ParseConfig(cfg.Executioner.Config)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
@@ -113,7 +109,6 @@ func New(cfg config.Config, log *slog.Logger) (*ShellExecutioner, error) {
 			Shell:   pcfg.Shell,
 		},
 		workDir: workDir,
-		log:     log,
 		stop:    make(chan struct{}),
 		ctx:     ctx,
 		cancel:  cancel,
@@ -126,11 +121,11 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.log.Info("stopping output scanner")
+			log.Info("stopping output scanner")
 			return
 		default:
 			if scanner.Scan() {
-				e.log.Info("command", slog.String("output", scanner.Text()))
+				log.Info("command", "output", scanner.Text())
 			} else {
 				if err := scanner.Err(); err != nil {
 					// Avoid logging errors if the context was canceled mid-scan
@@ -138,7 +133,7 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
 					if e.ctx.Err() == context.Canceled {
 						continue
 					}
-					e.log.Error("error reading output", tint.Err(err))
+					log.Error("error reading output", "err", err)
 				}
 				return
 			}
@@ -153,7 +148,7 @@ func (e *ShellExecutioner) writeToWorkDir(name string, data interface{}) (string
 	if err := os.WriteFile(filePath, []byte(data.(string)), 0644); err != nil {
 		return "", fmt.Errorf("error writing file to work dir: %w", err)
 	}
-	e.log.Info("wrote file to work dir", slog.String("path", filePath))
+	log.Info("wrote file to work dir", "path", filePath)
 	return filePath, nil
 }
 
@@ -227,6 +222,6 @@ func (e *ShellExecutioner) Execute(data interface{}) error {
 
 // Stop signals the executioner to stop
 func (e *ShellExecutioner) Stop() {
-	e.log.Info("shutting down executor")
+	log.Info("shutting down executor")
 	close(e.stop)
 }
