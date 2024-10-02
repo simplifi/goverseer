@@ -2,6 +2,7 @@ package shell_executioner
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -170,6 +171,27 @@ func TestShellExecutioner_Execute(t *testing.T) {
 	err := executioner.Execute("test_data")
 	assert.NoError(t, err,
 		"Executing a valid command should not return an error")
+
+	// This tests to ensure the workdir is still available after cleanup has run
+	// for the first time
+	err = executioner.Execute("test_data")
+	assert.NoError(t, err,
+		"Executing a valid command multiple times should not return an error")
+
+	// Test data persistance
+
+	testWorkDir := t.TempDir()
+	executioner.PersistData = true
+	executioner.WorkDir = testWorkDir
+
+	err = executioner.Execute("test_persistence")
+	assert.NoError(t, err,
+		"Executing a command with PersistData should not return an error")
+
+	dirs, _ := os.ReadDir(testWorkDir)
+	t.Logf("Dirs: %v", dirs)
+	assert.GreaterOrEqual(t, len(dirs), 1,
+		"Executing a command with PersistData should persist the data")
 }
 
 func TestShellExecutioner_Stop(t *testing.T) {
