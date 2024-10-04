@@ -76,6 +76,8 @@ func TestTimeWatcher_Watch(t *testing.T) {
 	select {
 	case value := <-changes:
 		assert.NotEmpty(t, value)
+		// assert that the value is a string
+		assert.IsType(t, "", value)
 	case <-time.After(2 * time.Second):
 		assert.Fail(t, "Timed out waiting for file change")
 	}

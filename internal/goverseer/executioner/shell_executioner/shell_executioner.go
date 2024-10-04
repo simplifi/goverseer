@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
@@ -18,7 +19,7 @@ const (
 	DataEnvVarName = "GOVERSEER_DATA"
 
 	// DefaultShell is the default shell to use when executing a command
-	DefaultShell = "/bin/sh"
+	DefaultShell = "/bin/sh -ec"
 
 	// DefaultWorkDir is the default value for the work directory
 	DefaultWorkDir = "/tmp"
@@ -34,16 +35,16 @@ type Config struct {
 	Command string
 
 	// Shell is the shell to use when executing the command
+	// Options can also be passed to the shell here
 	Shell string
 
 	// WorkDir is the directory in which the ShellExecutioner will store
-	// the command to run and the data to pass into the command
+	// the data to pass into the command
 	WorkDir string
 
-	// PersistWorkDir determines whether the command and data will persist after
-	// completion
+	// PersistWorkDir determines whether the data will persist after completion
 	// This can be useful to enable when troubleshooting configured commands but
-	// should generally remain disabled otherwise
+	// should generally remain disabled
 	PersistData bool
 }
 
@@ -146,8 +147,26 @@ func New(cfg config.Config) (*ShellExecutioner, error) {
 	}, nil
 }
 
+func (e *ShellExecutioner) enableOutputStreaming(cmd *exec.Cmd) error {
+	// Stream stdout of the command to the logger
+	stdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stdout pipe: %w", err)
+	}
+	go e.streamOutput(stdOut, log.InfoLevel)
+
+	// Stream stderr of the command to the logger
+	stdErr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stderr pipe: %w", err)
+	}
+	go e.streamOutput(stdErr, log.ErrorLevel)
+
+	return nil
+}
+
 // streamOutput streams the output of a pipe to the logger
-func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
+func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser, logLevel log.Level) {
 	scanner := bufio.NewScanner(pipe)
 	for {
 		select {
@@ -156,7 +175,7 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
 			return
 		default:
 			if scanner.Scan() {
-				log.Info("command", "output", scanner.Text())
+				log.Log(logLevel, "command", "output", scanner.Text())
 			} else {
 				if err := scanner.Err(); err != nil {
 					// Avoid logging errors if the context was canceled mid-scan
@@ -172,15 +191,21 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser) {
 	}
 }
 
-// writeToWorkDir writes the data to a file in the temporary work directory
+// writeTempData writes the data to a file in the temporary work directory
 // It returns the path to the file and an error if the data could not be written
-func (e *ShellExecutioner) writeToWorkDir(execWorkDir, name string, data interface{}) (string, error) {
-	filePath := fmt.Sprintf("%s/%s", execWorkDir, name)
-	if err := os.WriteFile(filePath, []byte(data.(string)), 0644); err != nil {
-		return "", fmt.Errorf("error writing file to work dir: %w", err)
+func (e *ShellExecutioner) writeTempData(data interface{}) (string, error) {
+	tempDataFile, err := os.CreateTemp(e.WorkDir, "goverseer")
+	if err != nil {
+		return "", fmt.Errorf("error creating temp file: %w", err)
 	}
-	log.Info("wrote file to work dir", "path", filePath)
-	return filePath, nil
+	defer tempDataFile.Close()
+
+	if _, err := tempDataFile.WriteString(data.(string)); err != nil {
+		return "", fmt.Errorf("error writing data to temp file: %w", err)
+	}
+
+	log.Info("wrote data to work dir", "path", tempDataFile.Name())
+	return tempDataFile.Name(), nil
 }
 
 // Execute runs the command with the given data
@@ -188,50 +213,33 @@ func (e *ShellExecutioner) writeToWorkDir(execWorkDir, name string, data interfa
 // returned an error.
 // The data is written to a temp file and the path is passed to the command via
 // the DataEnvVarName environment variable.
-// The command is started in the configured shell.
+// The command is run in the configured shell.
 func (e *ShellExecutioner) Execute(data interface{}) error {
-	var execWorkDir, dataPath, commandPath string
+	var tempDataPath string
 	var err error
 
-	// Create a temp directory to store the command and data
-	if execWorkDir, err = os.MkdirTemp(e.WorkDir, "goverseer"); err != nil {
-		return fmt.Errorf("error creating work dir: %w", err)
+	// Write the data passed in from the watcher to a temp file in the work dir
+	if tempDataPath, err = e.writeTempData(data); err != nil {
+		return fmt.Errorf("error writing data: %w", err)
 	}
 
 	if e.PersistData {
-		log.Warn("persisting data", "path", execWorkDir)
+		log.Warn("persisting data", "path", tempDataPath)
 	} else {
-		defer os.RemoveAll(execWorkDir)
+		defer os.Remove(tempDataPath)
 	}
 
-	// Write the data to a file in the work directory
-	if dataPath, err = e.writeToWorkDir(execWorkDir, "data", data); err != nil {
-		return fmt.Errorf("error writing data to work dir: %w", err)
+	// Build the command to run
+	// Split the Shell so we can pass the args to exec.Command the way it expects
+	// Pass the path to the data file via the DataEnvVarName environment variable
+	shellParts := strings.Split(e.Shell, " ")
+	cmd := exec.CommandContext(e.ctx, shellParts[0], append(shellParts[1:], e.Command)...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", DataEnvVarName, tempDataPath))
+
+	// Stream command output to the logger
+	if err := e.enableOutputStreaming(cmd); err != nil {
+		return fmt.Errorf("error enabling output streaming: %w", err)
 	}
-
-	// Write the command to a file in the work directory
-	if commandPath, err = e.writeToWorkDir(execWorkDir, "command", e.Command); err != nil {
-		return fmt.Errorf("error writing command to work dir: %w", err)
-	}
-
-	// Build the command
-	cmd := exec.CommandContext(e.ctx, e.Shell, commandPath)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", DataEnvVarName, dataPath))
-
-	// Handle output from command
-	combinedOutput, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("error creating output pipe: %w", err)
-	}
-	defer combinedOutput.Close()
-
-	// Redirect stderr to stdout
-	cmd.Stderr = cmd.Stdout
-
-	// Stream combined output to the logger
-	go func() {
-		e.streamOutput(combinedOutput)
-	}()
 
 	// Start the command running
 	// This does not block and depends on the caller to call cmd.Wait()
