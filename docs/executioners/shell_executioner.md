@@ -12,7 +12,7 @@ command via an environment variable named `GOVERSEER_DATA`.
 To use the Shell Executioner, you need to configure it in your Goverseer config
 file. The following configuration options are available:
 
-- `command`: This is the shell command you want to execute.For example,
+- `command`: This is the shell command you want to execute. For example,
   `echo "Data received: $GOVERSEER_DATA"`.
 - `shell`: (Optional) This specifies the shell to use for executing the command.
   Defaults to `/bin/sh -ec` if not provided.
