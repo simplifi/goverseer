@@ -35,6 +35,15 @@ func TestParseConfig(t *testing.T) {
 
 	parsedConfig, err = ParseConfig(map[string]interface{}{
 		"command": "echo 123",
+		"shell":   "/bin/bash -euo pipefail -c",
+	})
+	assert.NoError(t, err,
+		"Parsing a config with shell options not return an error")
+	assert.Equal(t, "/bin/bash -euo pipefail -c", parsedConfig.Shell,
+		"Shell should be set to the value in the config")
+
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"command": "echo 123",
 		"shell":   nil,
 	})
 	assert.NoError(t, err,
@@ -178,8 +187,13 @@ func TestShellExecutioner_Execute(t *testing.T) {
 	assert.NoError(t, err,
 		"Executing a valid command multiple times should not return an error")
 
-	// Test data persistance
+	// Test shell options
+	executioner.Shell = "/bin/bash -euo pipefail -c"
+	err = executioner.Execute("test_shell_opts")
+	assert.NoError(t, err,
+		"Executing a command with shell options should not return an error")
 
+	// Test data persistance
 	testWorkDir := t.TempDir()
 	executioner.PersistData = true
 	executioner.WorkDir = testWorkDir

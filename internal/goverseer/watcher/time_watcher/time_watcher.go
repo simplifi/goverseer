@@ -67,7 +67,6 @@ func New(cfg config.Config) (*TimeWatcher, error) {
 }
 
 // Watch ticks at regular intervals, sending the time to the changes channel
-// The changes channel is where the path to the file is sent when it changes
 func (w *TimeWatcher) Watch(change chan interface{}) {
 	log.Info("starting watcher")
 	for {
@@ -76,7 +75,7 @@ func (w *TimeWatcher) Watch(change chan interface{}) {
 			return
 		case value := <-time.After(time.Duration(w.PollSeconds) * time.Second):
 			log.Info("time watcher tick", "value", value)
-			change <- value
+			change <- value.String()
 		}
 	}
 }
