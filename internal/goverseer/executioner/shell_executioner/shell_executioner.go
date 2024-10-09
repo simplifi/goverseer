@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 )
 
 const (
@@ -153,29 +153,33 @@ func (e *ShellExecutioner) enableOutputStreaming(cmd *exec.Cmd) error {
 	if err != nil {
 		return fmt.Errorf("error creating stdout pipe: %w", err)
 	}
-	go e.streamOutput(stdOut, log.InfoLevel)
+	go e.streamOutput(stdOut, "info")
 
 	// Stream stderr of the command to the logger
 	stdErr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("error creating stderr pipe: %w", err)
 	}
-	go e.streamOutput(stdErr, log.ErrorLevel)
+	go e.streamOutput(stdErr, "error")
 
 	return nil
 }
 
 // streamOutput streams the output of a pipe to the logger
-func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser, logLevel log.Level) {
+func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser, outputType string) {
 	scanner := bufio.NewScanner(pipe)
 	for {
 		select {
 		case <-e.ctx.Done():
-			log.Info("stopping output scanner")
+			logger.Log.Info("stopping output scanner")
 			return
 		default:
 			if scanner.Scan() {
-				log.Log(logLevel, "command", "output", scanner.Text())
+				if outputType == "error" {
+					logger.Log.Error("command", "output", scanner.Text())
+				} else {
+					logger.Log.Info("command", "output", scanner.Text())
+				}
 			} else {
 				if err := scanner.Err(); err != nil {
 					// Avoid logging errors if the context was canceled mid-scan
@@ -183,7 +187,7 @@ func (e *ShellExecutioner) streamOutput(pipe io.ReadCloser, logLevel log.Level) 
 					if e.ctx.Err() == context.Canceled {
 						continue
 					}
-					log.Error("error reading output", "err", err)
+					logger.Log.Error("error reading output", "err", err)
 				}
 				return
 			}
@@ -204,7 +208,7 @@ func (e *ShellExecutioner) writeTempData(data interface{}) (string, error) {
 		return "", fmt.Errorf("error writing data to temp file: %w", err)
 	}
 
-	log.Info("wrote data to work dir", "path", tempDataFile.Name())
+	logger.Log.Info("wrote data to work dir", "path", tempDataFile.Name())
 	return tempDataFile.Name(), nil
 }
 
@@ -224,7 +228,7 @@ func (e *ShellExecutioner) Execute(data interface{}) error {
 	}
 
 	if e.PersistData {
-		log.Warn("persisting data", "path", tempDataPath)
+		logger.Log.Warn("persisting data", "path", tempDataPath)
 	} else {
 		defer os.Remove(tempDataPath)
 	}
@@ -270,6 +274,6 @@ func (e *ShellExecutioner) Execute(data interface{}) error {
 
 // Stop signals the executioner to stop
 func (e *ShellExecutioner) Stop() {
-	log.Info("shutting down executor")
+	logger.Log.Info("shutting down executor")
 	close(e.stop)
 }

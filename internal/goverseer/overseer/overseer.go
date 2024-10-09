@@ -3,9 +3,9 @@ package overseer
 import (
 	"sync"
 
-	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/simplifi/goverseer/internal/goverseer/executioner"
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher"
 )
 
@@ -31,6 +31,8 @@ type Overseer struct {
 
 // New creates a new Overseer
 func New(cfg *config.Config) (*Overseer, error) {
+	logger.SetLevel(cfg.Logger.Level)
+
 	watcher, err := watcher.New(cfg)
 	if err != nil {
 		return nil, err
@@ -69,7 +71,7 @@ func (o *Overseer) Run() {
 			go func() {
 				defer o.waitGroup.Done()
 				if err := o.executioner.Execute(data); err != nil {
-					log.Error("error running executioner", "err", err)
+					logger.Log.Error("error running executioner", "err", err)
 				}
 			}()
 		}
@@ -78,14 +80,14 @@ func (o *Overseer) Run() {
 
 // Stop signals the overseer to stop
 func (o *Overseer) Stop() {
-	log.Info("shutting down overseer")
+	logger.Log.Info("shutting down overseer")
 	close(o.stop)
 	o.watcher.Stop()
 	o.executioner.Stop()
 
-	log.Info("waiting for overseer to finish")
+	logger.Log.Info("waiting for overseer to finish")
 	// Wait here so we don't close the changes channel before the executioner is done
 	o.waitGroup.Wait()
-	log.Info("done")
+	logger.Log.Info("done")
 	close(o.change)
 }

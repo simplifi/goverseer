@@ -26,10 +26,19 @@ type ExecutionerConfig struct {
 	Config map[string]interface{}
 }
 
+// LoggerConfig is the configuration for the global logger
+type LoggerConfig struct {
+	// Level is the log level
+	Level string
+}
+
 // Config is the configuration for a watcher and executioner
 type Config struct {
 	// Name is the name of the configuration, this will show up in logs
 	Name string
+
+	// Logger is the configuration for the logger
+	Logger LoggerConfig
 
 	// Watcher is the configuration for the watcher
 	// it is dynamic because the configuration can be different for each watcher

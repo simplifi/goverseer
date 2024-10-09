@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 )
 
 const (
@@ -219,7 +219,7 @@ func (w *GceMetadataWatcher) getMetadata() (*gceMetadataResponse, error) {
 // Watch watches the GCE metadata for changes and sends value to changes channel
 // The changes channel is where the value is sent when it changes
 func (w *GceMetadataWatcher) Watch(change chan interface{}) {
-	log.Info("starting watcher")
+	logger.Log.Info("starting watcher")
 
 	for {
 		select {
@@ -234,7 +234,7 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 					continue
 				}
 
-				log.Error("error getting metadata", "err", err)
+				logger.Log.Error("error getting metadata", "err", err)
 
 				// Usually getMetadata opens up a connection to the metadata server
 				// and waits for a change. If there is an error we want to wait for a
@@ -247,7 +247,7 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 
 			// Only send a change if it has actually changed by comparing etags
 			if w.lastETag != gceMetadata.etag {
-				log.Info("change detected",
+				logger.Log.Info("change detected",
 					"key", w.Key,
 					"etag", gceMetadata.etag,
 					"previous_etag", w.lastETag)
@@ -262,6 +262,6 @@ func (w *GceMetadataWatcher) Watch(change chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *GceMetadataWatcher) Stop() {
-	log.Info("shutting down watcher")
+	logger.Log.Info("shutting down watcher")
 	w.cancel()
 }
