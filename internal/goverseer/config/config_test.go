@@ -31,7 +31,7 @@ watcher:
 executioner:
   type: log
 `
-	// testConfigWatcherToLogNoConfig is a basic test configuration for testing
+	// testConfigLogger is a basic test configuration for testing
 	// the main logger configuration
 	testConfigLogger = `
 name: Logger
