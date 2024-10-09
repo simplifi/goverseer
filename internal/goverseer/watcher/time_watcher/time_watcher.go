@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 )
 
 const (
@@ -68,13 +68,13 @@ func New(cfg config.Config) (*TimeWatcher, error) {
 
 // Watch ticks at regular intervals, sending the time to the changes channel
 func (w *TimeWatcher) Watch(change chan interface{}) {
-	log.Info("starting watcher")
+	logger.Log.Info("starting watcher")
 	for {
 		select {
 		case <-w.stop:
 			return
 		case value := <-time.After(time.Duration(w.PollSeconds) * time.Second):
-			log.Info("time watcher tick", "value", value)
+			logger.Log.Info("time watcher tick", "value", value)
 			change <- value.String()
 		}
 	}
@@ -82,6 +82,6 @@ func (w *TimeWatcher) Watch(change chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *TimeWatcher) Stop() {
-	log.Info("shutting down watcher")
+	logger.Log.Info("shutting down watcher")
 	close(w.stop)
 }

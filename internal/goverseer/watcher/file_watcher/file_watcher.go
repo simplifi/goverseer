@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/simplifi/goverseer/internal/goverseer/config"
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 )
 
 const (
@@ -91,7 +91,7 @@ func New(cfg config.Config) (*FileWatcher, error) {
 // Watch watches the file for changes and sends the path to the changes channel
 // The changes channel is where the path to the file is sent when it changes
 func (w *FileWatcher) Watch(changes chan interface{}) {
-	log.Info("starting watcher")
+	logger.Log.Info("starting watcher")
 
 	for {
 		select {
@@ -100,12 +100,12 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 		case <-time.After(time.Duration(w.PollSeconds) * time.Second):
 			info, err := os.Stat(w.Path)
 			if err != nil {
-				log.Error("error getting file info",
+				logger.Log.Error("error getting file info",
 					"path", w.Path,
 					"err", err)
 			}
 			if err == nil && info.ModTime().After(w.lastValue) {
-				log.Info("file changed",
+				logger.Log.Info("file changed",
 					"path", w.Path,
 					"mod_time", info.ModTime())
 				w.lastValue = info.ModTime()
@@ -117,6 +117,6 @@ func (w *FileWatcher) Watch(changes chan interface{}) {
 
 // Stop signals the watcher to stop
 func (w *FileWatcher) Stop() {
-	log.Info("shutting down watcher")
+	logger.Log.Info("shutting down watcher")
 	close(w.stop)
 }

@@ -31,6 +31,17 @@ watcher:
 executioner:
   type: log
 `
+	// testConfigLogger is a basic test configuration for testing
+	// the main logger configuration
+	testConfigLogger = `
+name: Logger
+logger:
+  level: debug
+watcher:
+  type: time
+executioner:
+  type: log
+`
 )
 
 // writeTestConfigs writes test configurations to a temporary directory
@@ -75,4 +86,12 @@ func TestFromFile(t *testing.T) {
 		"An executioner with no Config should have an empty map for the value")
 	assert.Equal(t, map[string]interface{}(nil), config.Watcher.Config,
 		"A watcher with no Config should have an empty map for the value")
+
+	// Test with a config with logger configuration
+	_, testConfig = writeTestConfigs(t, testConfigLogger)
+	config, err = FromFile(testConfig)
+	assert.NoError(t, err,
+		"Parsing a config file with a valid logger config should not error")
+	assert.Equal(t, "debug", config.Logger.Level,
+		"An config file with logger configuration should parse correctly")
 }
