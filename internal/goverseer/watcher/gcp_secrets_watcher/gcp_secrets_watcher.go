@@ -47,7 +47,7 @@ type Config struct {
 func ParseConfig(config map[string]interface{}) (*Config, error) {
 	cfg := &Config{
 		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
-		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,	
+		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
 
 	if projectsRaw, ok := config["projects"].([]interface{}); ok {
@@ -116,8 +116,8 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 type GcpSecretsWatcher struct {
 	Config
 
-	// lastKnownValues stores the last known secret value for each project
-	lastKnownValues map[string]string
+	// lastKnownETags stores the last known ETag for each project's secret
+	lastKnownETags map[string]string
 
 	// client is the GCP Secrets Manager client
 	client *secretmanager.Client
@@ -131,70 +131,75 @@ type GcpSecretsWatcher struct {
 
 // Creates a new GcpSecretsWatcher based on the passed config
 func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
-	cfg, err := ParseConfig(config)
-	if err != nil {
-		return nil, err
-	}
+    cfg, err := ParseConfig(config)
+    if err != nil {
+        return nil, err
+    }
 
-	ctx := context.Background()
-	var client *secretmanager.Client
+    ctx := context.Background()
+    var client *secretmanager.Client
 
-	// Creates a new GCP Secrets Manager client
-	// If a credentials file is provided, uses it
-	// Otherwise, uses the default credentials
-	if cfg.CredentialsFile != "" {
-		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialsFile))
-	} else {
-		client, err = secretmanager.NewClient(ctx)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Secrets Manager client: %v", err)
-	}
+    // Creates a new GCP Secrets Manager client
+    // If a credentials file is provided, uses it
+    // Otherwise, uses the default credentials
+    if cfg.CredentialsFile != "" {
+        client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialsFile))
+    } else {
+        client, err = secretmanager.NewClient(ctx)
+    }
+    if err != nil {
+        return nil, fmt.Errorf("failed to create Secrets Manager client: %v", err)
+    }
 
-	derivedCtx, cancel := context.WithCancel(ctx)
+    derivedCtx, cancel := context.WithCancel(ctx)
 
-	watcher := &GcpSecretsWatcher{
-		Config:          *cfg,
-		lastKnownValues: make(map[string]string),
-		client:          client,
-		ctx:             derivedCtx,
-		cancel:          cancel,
-	}
-	
-	// Closes the client when the watcher is stopped
-	go func() {
-		<-watcher.ctx.Done()
-		if watcher.client != nil {
-			if err := watcher.client.Close(); err != nil {
-				log.Printf("error closing Secrets Manager client: %v", err)
-			}
-		}
-	}()
+    watcher := &GcpSecretsWatcher{
+        Config:         *cfg,
+        lastKnownETags: make(map[string]string),
+        client:         client,
+        ctx:            derivedCtx,
+        cancel:         cancel,
+    }
 
-	return watcher, nil
+    // Closes the client when the watcher is stopped
+    go func() {
+        <-watcher.ctx.Done()
+        if watcher.client != nil {
+            if err := watcher.client.Close(); err != nil {
+                log.Printf("error closing Secrets Manager client: %v", err)
+            }
+        }
+    }()
+
+    return watcher, nil
 }
 
-// Retrieves the latest value of the secret 
+// Retrieves the latest value and ETag of the secret
 // from GCP Secrets Manager
-func (w *GcpSecretsWatcher) getSecretValue(project string) (string, error) {
-	name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, w.SecretName)
-	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: name,
-	}
+func (w *GcpSecretsWatcher) getSecretValueAndEtag(project string) (string, string, error) {
+    name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, w.SecretName)
+    req := &secretmanagerpb.AccessSecretVersionRequest{
+        Name: name,
+    }
 
-	resp, err := w.client.AccessSecretVersion(w.ctx, req)
-	if err != nil {
-		return "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, project, err)
-	}
-	return string(resp.Payload.Data), nil
+    resp, err := w.client.AccessSecretVersion(w.ctx, req)
+    if err != nil {
+        return "", "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, project, err)
+    }
+
+	// TODO: Check if this is the best approach for getting the ETag, which is not part of the AccessSecretVersionResponse
+    etag := resp.ProtoReflect().Get(resp.ProtoReflect().Descriptor().Fields().ByName("Etag")).String()
+    payload := string(resp.GetPayload().GetData())
+
+    return payload, etag, nil
 }
 
-// Watches the GCP Secrets Manager for changes and 
-// sends the new value to the changes channel
+// Watches the GCP Secrets Manager for changes in ETag and sends
+// the project ID and the secret payload to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
-    log.Println("starting GCP Secrets Manager watcher (using NewClient)")
+    log.Println("starting GCP Secrets Manager watcher (using ETags for change detection)")
 
-    w.lastKnownValues = make(map[string]string)
+    w.lastKnownETags = make(map[string]string)
 
     for {
         select {
@@ -202,29 +207,28 @@ func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
             log.Println("GCP Secrets Manager watcher (using NewClient) stopped")
             return
         default:
-            currentValues := make(map[string]string)
-            changed := false
+            etagChanged := false
+            updatedProjects := make(map[string]string)
 
-			// Iterate over each project and get the secret value
             for _, project := range w.Projects {
-                secretValue, err := w.getSecretValue(project)
+                secretValue, etag, err := w.getSecretValueAndEtag(project)
                 if err != nil {
-                    log.Printf("error getting secret for %s (using NewClient): %v", project, err)
+                    log.Printf("error getting secret and ETag for %s: %v", project, err)
                     time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
                     continue
                 }
-                currentValues[project] = secretValue
 
-                lastValue, known := w.lastKnownValues[project]
-                if !known || secretValue != lastValue {
-                    log.Printf("change detected in project %s for secret %s (using NewClient)", project, w.SecretName)
-                    changed = true
+                lastEtag, known := w.lastKnownETags[project]
+                if !known || etag != lastEtag {
+                    log.Printf("ETag changed for secret %s in project %s", w.SecretName, project)
+                    etagChanged = true
+                    updatedProjects[project] = secretValue
+                    w.lastKnownETags[project] = etag
                 }
             }
 
-            if changed {
-                change <- currentValues
-                w.lastKnownValues = currentValues
+            if etagChanged {
+                change <- updatedProjects
             }
 
             time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
