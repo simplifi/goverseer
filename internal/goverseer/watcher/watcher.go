@@ -7,6 +7,7 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/file_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/gce_metadata_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
+	"github.com/simplifi/goverseer/internal/goverseer/watcher/gcp_secrets_watcher"
 )
 
 // Watcher is an interface for watching for changes
@@ -25,6 +26,8 @@ func New(cfg *config.Config) (Watcher, error) {
 		return time_watcher.New(*cfg)
 	case "gce_metadata":
 		return gce_metadata_watcher.New(*cfg)
+	case "gcp_secrets":
+		return gcp_secrets_watcher.New(cfg.Watcher.Config)
 	default:
 		return nil, fmt.Errorf("unknown watcher type: %s", cfg.Watcher.Type)
 	}
