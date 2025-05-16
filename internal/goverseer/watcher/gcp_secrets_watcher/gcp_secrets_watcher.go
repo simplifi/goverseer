@@ -8,6 +8,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -26,9 +27,9 @@ type Config struct {
 	// SecretName is the name of the secret to watch in each project
 	SecretName string
 
-	// The path to the GCP service account credential file
-	// If empty, it will rely on Application Default Credentials
-	CredentialFile string
+	// CredentialsFile is the path to the GCP credentials file
+	// If not set, the default credentials will be used
+	CredentialsFile string
 
 	// The interval in seconds to poll the secret
 	// Default is 60 seconds
@@ -82,10 +83,13 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		return nil, fmt.Errorf("secret_name is required")
 	}
 
-	if credentialFileRaw, ok := config["credential_file"].(string); ok {
-		cfg.CredentialFile = credentialFileRaw
-	} else if config["credential_file"] != nil {
-		return nil, fmt.Errorf("credential_file must be a string")
+	if credentialsFileRaw, ok := config["credentials_file"].(string); ok {
+		if credentialsFileRaw == "" {
+			return nil, fmt.Errorf("credentials_file cannot be empty")
+		}
+		cfg.CredentialsFile = credentialsFileRaw
+	} else if config["credentials_file"] != nil {
+		return nil, fmt.Errorf("credentials_file must be a string")
 	}
 
 	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"].(int); ok {
@@ -115,9 +119,6 @@ type GcpSecretsWatcher struct {
 	// lastKnownValues stores the last known secret value for each project
 	lastKnownValues map[string]string
 
-	// lastknownETags stores the last known etag for each project
-	lastKnownETags map[string]string
-
 	// client is the GCP Secrets Manager client
 	client *secretmanager.Client
 
@@ -136,8 +137,16 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	}
 
 	ctx := context.Background()
+	var client *secretmanager.Client
 
-	client, err := secretmanager.NewClient(ctx)
+	// Creates a new GCP Secrets Manager client
+	// If a credentials file is provided, uses it
+	// Otherwise, uses the default credentials
+	if cfg.CredentialsFile != "" {
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialsFile))
+	} else {
+		client, err = secretmanager.NewClient(ctx)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Secrets Manager client: %v", err)
 	}
@@ -147,7 +156,6 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	watcher := &GcpSecretsWatcher{
 		Config:          *cfg,
 		lastKnownValues: make(map[string]string),
-		lastKnownETags:  make(map[string]string),
 		client:          client,
 		ctx:             derivedCtx,
 		cancel:          cancel,
@@ -224,10 +232,9 @@ func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
     }
 }
 
-// Stops the watcher and closes the client
-// This function is called when the watcher is stopped
-// It signals to the goroutine to close the Secret Manager
-// client (see the New function above)
+// Called when the watcher is no longer needed
+// This function signals to the goroutine 
+// to close the Secret Manager
 func (w *GcpSecretsWatcher) Stop() {
 	log.Println("shutting down GCP Secrets Manager watcher (using NewClient)")
 	w.cancel()
