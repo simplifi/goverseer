@@ -234,7 +234,7 @@ func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
 
 // Called when the watcher is no longer needed
 // This function signals to the goroutine 
-// to close the Secret Manager
+// to close the Secret Manager client
 func (w *GcpSecretsWatcher) Stop() {
 	log.Println("shutting down GCP Secrets Manager watcher (using NewClient)")
 	w.cancel()
