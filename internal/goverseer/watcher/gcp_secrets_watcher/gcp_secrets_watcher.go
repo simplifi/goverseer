@@ -50,28 +50,29 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
 
-	if projectsRaw, ok := config["projects"].([]interface{}); ok {
-		var projects []string
-		for _, p := range projectsRaw {
-			if project, ok := p.(string); ok {
-				if project == "" {
-					return nil, fmt.Errorf("project name cannot be empty")
-				}
-				projects = append(projects, project)
-			} else {
-				return nil, fmt.Errorf("projects must be a list of strings")
-			}
-		}
-		if len(projects) == 0 {
-			return nil, fmt.Errorf("at least one project must be specified")
-		}
-		cfg.Projects = projects
-	} else if config["projects"] != nil {
-		return nil, fmt.Errorf("projects must be a list")
-	} else {
-		return nil, fmt.Errorf("projects is required")
-	}
+	// Must have at least one project in the form of a string
+	if projectsRaw, ok := config["projects"]; ok {
+        projectsSlice, isSlice := projectsRaw.([]interface{})
+        if !isSlice {
+            return nil, fmt.Errorf("projects must be a list")
+        }
+        if len(projectsSlice) == 0 {
+            return nil, fmt.Errorf("at least one project must be specified")
+        }
+        var projects []string
+        for _, p := range projectsSlice {
+            project, isString := p.(string)
+            if !isString {
+                return nil, fmt.Errorf("project name must be a string")
+            }
+            projects = append(projects, project)
+        }
+        cfg.Projects = projects
+    } else {
+        return nil, fmt.Errorf("projects is required")
+    }
 
+	// Secret name is required and must be a string
 	if secretNameRaw, ok := config["secret_name"].(string); ok {
 		if secretNameRaw == "" {
 			return nil, fmt.Errorf("secret_name cannot be empty")
@@ -83,6 +84,8 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		return nil, fmt.Errorf("secret_name is required")
 	}
 
+	// Credentials file is optional and must be a string
+	// If not set, the default ADC will be used
 	if credentialsFileRaw, ok := config["credentials_file"].(string); ok {
 		if credentialsFileRaw == "" {
 			return nil, fmt.Errorf("credentials_file cannot be empty")
@@ -92,6 +95,8 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		return nil, fmt.Errorf("credentials_file must be a string")
 	}
 
+	// Check interval is optional and must be a positive integer
+	// If not set, the default is 60 seconds
 	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"].(int); ok {
 		if checkIntervalSecondsRaw <= 0 {
 			return nil, fmt.Errorf("check_interval_seconds must be a positive integer")
@@ -101,6 +106,8 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		return nil, fmt.Errorf("check_interval_seconds must be an integer")
 	}
 
+	// Secret error wait seconds is optional and must be a positive integer
+	// If not set, the default is 5 seconds
 	if secretErrorWaitSecondsRaw, ok := config["secret_error_wait_seconds"].(int); ok {
 		if secretErrorWaitSecondsRaw <= 0 {
 			return nil, fmt.Errorf("secret_error_wait_seconds must be a positive integer")
