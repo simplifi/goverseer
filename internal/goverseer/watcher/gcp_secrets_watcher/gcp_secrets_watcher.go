@@ -181,8 +181,9 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
     return watcher, nil
 }
 
-// Retrieves the latest value and ETag of the secret
-// from GCP Secrets Manager
+// Retrieves the latest ETag of the secret
+// from GCP Secrets Manager, and if there's a change,
+// returns the secret value and the ETag
 func (w *GcpSecretsWatcher) getSecretValueAndEtag(project string) (string, string, error) {
     name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, w.SecretName)
     req := &secretmanagerpb.AccessSecretVersionRequest{
