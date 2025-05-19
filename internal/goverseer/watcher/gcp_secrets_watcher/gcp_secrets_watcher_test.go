@@ -18,28 +18,20 @@ type mockSecretManagerClient struct {
 	mock.Mock
 }
 
-func (m *mockSecretManagerClient) GetSecretVersion(
-	ctx context.Context, 
-	req *secretmanagerpb.GetSecretVersionRequest, 
-	opts ...gax.CallOption,
-) (*secretmanagerpb.SecretVersion, error) {
-    args := m.Called(ctx, req, opts)
-    if a := args.Get(0); a != nil {
-        return a.(*secretmanagerpb.SecretVersion), args.Error(1)
-    }
-    return nil, args.Error(1)
+func (m *mockSecretManagerClient) GetSecretVersion(ctx context.Context, req *secretmanagerpb.GetSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.SecretVersion, error) {
+	args := m.Called(ctx, req, opts)
+	if a := args.Get(0); a != nil {
+		return a.(*secretmanagerpb.SecretVersion), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
-func (m *mockSecretManagerClient) AccessSecretVersion(
-	ctx context.Context, 
-	req *secretmanagerpb.AccessSecretVersionRequest, 
-	opts ...gax.CallOption,
-) (*secretmanagerpb.AccessSecretVersionResponse, error) {
-    args := m.Called(ctx, req, opts)
-    if a := args.Get(0); a != nil {
-        return a.(*secretmanagerpb.AccessSecretVersionResponse), args.Error(1)
-    }
-    return nil, args.Error(1)
+func (m *mockSecretManagerClient) AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.AccessSecretVersionResponse, error) {
+	args := m.Called(ctx, req, opts)
+	if a := args.Get(0); a != nil {
+		return a.(*secretmanagerpb.AccessSecretVersionResponse), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *mockSecretManagerClient) Close() error {
@@ -53,15 +45,18 @@ var _ SecretManagerClientInterface = (*mockSecretManagerClient)(nil)
 // Tests the New function
 func TestNew(t *testing.T) {
 	validConfig := map[string]interface{}{
-		"projects":    []interface{}{"test-project"},
-		"secret_name": "test-secret",
+		"project_id":      	"test-project",
+		"secret_name":     	"test-secret",
+		"secrets_file_path": "/tmp/test-secrets.txt",
 	}
 	watcher, err := New(validConfig)
 	assert.NoError(t, err, "Creating a new GcpSecretsWatcher should not return an error")
 	assert.NotNil(t, watcher, "Creating a new GcpSecretsWatcher should return a watcher")
 
 	invalidConfig := map[string]interface{}{
-		"projects": nil,
+		"project_id":    nil,
+		"secret_name": "test-secret",
+		"secrets_file_path": "/tmp/test-secrets.txt",
 	}
 	watcher, err = New(invalidConfig)
 	assert.Error(t, err, "Creating a new GcpSecretsWatcher with an invalid config should return an error")
@@ -70,60 +65,57 @@ func TestNew(t *testing.T) {
 
 // Tests the Watch function for value changes based on ETag
 func TestGcpSecretsWatcher_Watch_EtagChange(t *testing.T) {
-    ctx, cancel := context.WithCancel(context.Background())
-    mockClient := new(mockSecretManagerClient)
+	ctx, cancel := context.WithCancel(context.Background())
+	mockClient := new(mockSecretManagerClient)
 
-	 log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
+	// Set up expectations for GetSecretVersion (for ETag retrieval)
+	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once()
+	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.SecretVersion{Etag: "etag-2"}, nil).Once()
 
-    // Set up expectation for the initial GetSecretVersion
-    mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-        &secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once()
-	// Set up expectation for the second AccessSecretVersion
+	// Set up expectation for AccessSecretVersion (for secret value retrieval)
+	mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.AccessSecretVersionResponse{
+			Payload: &secretmanagerpb.SecretPayload{
+				Data: []byte("new-secret-value"),
+			},
+		}, nil).Once()
 
-    // Set up expectation for AccessSecretVersion after the initial poll
-    mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-        &secretmanagerpb.AccessSecretVersionResponse{
-            Payload: &secretmanagerpb.SecretPayload{
-                Data: []byte("new-secret-value"),
-            },
-        }, nil).Once()
+	watcher := GcpSecretsWatcher{
+		Config: Config{
+			ProjectID:               "test-project",
+			SecretName:             "test-secret",
+			CheckIntervalSeconds:    1,
+			SecretErrorWaitSeconds: 1,
+			SecretsFilePath:       "/tmp/test-secrets.txt",
+		},
+		client:        mockClient,
+		ctx:           ctx,
+		lastKnownETag: "etag-1",
+		cancel:        cancel,
+	}
 
-    watcher := GcpSecretsWatcher{
-        Config: Config{
-            Projects:               []string{"test-project"},
-            SecretName:             "test-secret",
-            CheckIntervalSeconds:    1,
-            SecretErrorWaitSeconds: 1,
-        },
-        client:        mockClient,
-        ctx:           ctx,
-        lastKnownETags: make(map[string]string),
-        cancel:        cancel,
-    }
-
-    changeChan := make(chan interface{}, 1)
-    stopChan := make(chan struct{})
+	changeChan := make(chan interface{}, 1)
+	stopChan := make(chan struct{})
 
 	go func() {
-        defer close(stopChan)
-        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine started")
-        watcher.Watch(changeChan)
-        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine finished")
-    }()
+		defer close(stopChan)
+		watcher.Watch(changeChan)
+	}()
 
-    select {
-    case value := <-changeChan:
-        expected := map[string]string{"test-project": "new-secret-value"}
-        assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel")
-		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
-		watcher.Stop()
-    case <-time.After(3 * time.Second):
-        t.Fatalf("Watch did not send a change within the timeout")
-    }
+	select {
+	case value := <-changeChan:
+		expected := "new-secret-value"
+		assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel when ETag changes")
+	case <-time.After(3 * time.Second):
+		t.Fatalf("Watch did not send a change within the timeout")
+	}
 
-    <-stopChan
-    log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
-    mockClient.AssertExpectations(t)
+	watcher.Stop()
+	<-stopChan
+
+	mockClient.AssertExpectations(t)
 }
 
 // Tests the Stop function
@@ -146,10 +138,11 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
 
     watcher := GcpSecretsWatcher{
         Config: Config{
-            Projects:               []string{"test-project"},
+            ProjectID:               "test-project",
             SecretName:             "test-secret",
             CheckIntervalSeconds:    1,
             SecretErrorWaitSeconds: 1,
+            SecretsFilePath:       "/tmp/test-secrets.txt",
         },
         client:        mockClient,
         ctx:           ctx,
@@ -161,9 +154,7 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
     wg.Add(1)
     go func() {
         defer wg.Done()
-        log.Println("TestGcpSecretsWatcher_Stop: Watch goroutine started")
         watcher.Watch(make(chan interface{}, 1))
-        log.Println("TestGcpSecretsWatcher_Stop: Watch goroutine finished")
         close(stopChan)
     }()
 
@@ -175,9 +166,6 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
     watcher.Stop()
     log.Println("TestGcpSecretsWatcher_Stop: Waiting for Watch goroutine")
     wg.Wait()
-
-    // Explicitly call Close on the mock client
-    watcher.client.Close()
 
     // Asserts that the client's Close method was called
     log.Println("TestGcpSecretsWatcher_Stop: Asserting mock expectations")

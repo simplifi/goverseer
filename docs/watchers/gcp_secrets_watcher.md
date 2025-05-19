@@ -6,8 +6,8 @@ The GCP Secrets Manager Watcher allows you to monitor a secret stored in Google 
 
 To use the GCP Secrets Manager Watcher, you need to configure it in your Goverseer config file. The following configuration options are available under the `config` section of your watcher definition:
 
-- `projects`: (Required) A list of GCP project IDs where the secret is stored (e.g., `["nomad-dev", "nomad-prd"]`). The watcher will monitor the secrets in all listed projects.
 - `secret_name`: (Required) The name of the secret to watch within each of the specified projects (e.g., `nomad-license-key`).
+- `default_
 - `credentials_file`: (Optional) Path for the credentials file if needing to test locally or use a service account's credentials instead of the ADC approach assumed.
 - `check_interval_seconds`: (Optional) The interval in seconds at which the watcher will poll the Secret Manager for changes. Defaults to `60` seconds.
 - `secret_error_wait_seconds`: (Optional) The number of seconds to wait before retrying after a failed attempt to access the secret. Defaults to `5` seconds.
@@ -19,9 +19,9 @@ name: gcp_secrets_watcher_example
 watcher:
   type: gcp_secrets
   config:
-    projects: ["nomad-dev", "nomad-prd"]
     secret_name: "nomad-license-key"
     check_interval_seconds: 60
+    default_
 executioner:
   type: shell
   config:

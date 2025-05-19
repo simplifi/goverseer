@@ -9,7 +9,6 @@ import (
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"google.golang.org/api/option"
-	"github.com/googleapis/gax-go/v2"
 )
 
 const (
@@ -22,15 +21,15 @@ const (
 )
 
 type Config struct {
-	// Projects is a list of GCP project IDs to monitor
-	Projects []string
+	// ProjectID is the GCP project ID where the secret is located
+	ProjectID string
 
-	// SecretName is the name of the secret to watch in each project
+	// SecretName is the name of the secret to watch in the specified project
 	SecretName string
 
 	// CredentialsFile is the path to the GCP credentials file
 	// If not set, the default ADC will be used
-	CredentialsFile string
+	CredentialFile string
 
 	// The interval in seconds to poll the secret
 	// Default is 60 seconds
@@ -40,53 +39,39 @@ type Config struct {
 	// before retrying a failed secret access
 	// Default is 5 seconds
 	SecretErrorWaitSeconds int
+
+	// SecretsFilePath is the path to the file to update on the local VM
+	SecretsFilePath string
 }
 
 // Parses the config for the watcher
-// Validates the config, sets defaults
-// if missing, and returns the config
+// Validates the config, sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
 	cfg := &Config{
-		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
+		CheckIntervalSeconds:    DefaultCheckIntervalSeconds,
 		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
 
-	if projectsRaw, ok := config["projects"]; ok {
-		projectsSlice, isSlice := projectsRaw.([]interface{})
-		if !isSlice {
-			return nil, fmt.Errorf("projects must be a list")
+	if projectIDRaw, ok := config["project_id"].(string); ok {
+		if projectIDRaw == "" {
+			return nil, fmt.Errorf("project_id must not be empty")
 		}
-		if len(projectsSlice) == 0 {
-			return nil, fmt.Errorf("at least one project must be specified")
-		}
-		var projects []string
-		for _, p := range projectsSlice {
-			project, isString := p.(string)
-			if !isString {
-				return nil, fmt.Errorf("project name must be a string")
-			}
-			projects = append(projects, project)
-		}
-		cfg.Projects = projects
+		cfg.ProjectID = projectIDRaw
 	} else {
-		return nil, fmt.Errorf("projects is required")
+		return nil, fmt.Errorf("project_id is required")
 	}
 
 	if secretNameRaw, ok := config["secret_name"].(string); ok {
 		if secretNameRaw == "" {
-			return nil, fmt.Errorf("secret_name cannot be empty")
+			return nil, fmt.Errorf("secret_name must not be empty")
 		}
 		cfg.SecretName = secretNameRaw
-	} else if config["secret_name"] != nil {
-		return nil, fmt.Errorf("secret_name must be a string")
 	} else {
 		return nil, fmt.Errorf("secret_name is required")
 	}
 
-	if credentialFileRaw, ok := config["credentials_file"].(string); ok {
-		cfg.CredentialsFile = credentialFileRaw
-	} else if config["credentials_file"] != nil {
-		return nil, fmt.Errorf("credentials_file must be a string")
+	if credentialFileRaw, ok := config["credential_file"].(string); ok {
+		cfg.CredentialFile = credentialFileRaw
 	}
 
 	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"].(int); ok {
@@ -94,8 +79,6 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 			return nil, fmt.Errorf("check_interval_seconds must be a positive integer")
 		}
 		cfg.CheckIntervalSeconds = checkIntervalSecondsRaw
-	} else if config["check_interval_seconds"] != nil {
-		return nil, fmt.Errorf("check_interval_seconds must be an integer")
 	}
 
 	if secretErrorWaitSecondsRaw, ok := config["secret_error_wait_seconds"].(int); ok {
@@ -103,34 +86,26 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 			return nil, fmt.Errorf("secret_error_wait_seconds must be a positive integer")
 		}
 		cfg.SecretErrorWaitSeconds = secretErrorWaitSecondsRaw
-	} else if config["secret_error_wait_seconds"] != nil {
-		return nil, fmt.Errorf("secret_error_wait_seconds must be an integer")
+	}
+
+	if secretsFilePathRaw, ok := config["secrets_file_path"].(string); ok {
+		if secretsFilePathRaw == "" {
+			return nil, fmt.Errorf("secrets_file_path must not be empty")
+		}
+		cfg.SecretsFilePath = secretsFilePathRaw
+	} else {
+		return nil, fmt.Errorf("secrets_file_path is required")
 	}
 
 	return cfg, nil
 }
 
-// SecretManagerClientInterface defines the methods from the Secret Manager client that GcpSecretsWatcher uses.
-type SecretManagerClientInterface interface {
-    GetSecretVersion(ctx context.Context, req *secretmanagerpb.GetSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.SecretVersion, error)
-    AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.AccessSecretVersionResponse, error)
-    Close() error
-}
-
 type GcpSecretsWatcher struct {
 	Config
-
-	// lastKnownETags stores the last known ETag for each project's secret
-	lastKnownETags map[string]string
-
-	// client is the GCP Secrets Manager client
-	client SecretManagerClientInterface
-
-	// ctx is the context
-	ctx context.Context
-
-	// cancel is the cancel function used to stop the watcher
-	cancel context.CancelFunc
+	lastKnownETag string
+	client        *secretmanager.Client
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // Creates a new GcpSecretsWatcher based on the passed config
@@ -144,10 +119,8 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	var client *secretmanager.Client
 
 	// Creates a new GCP Secrets Manager client
-	// If a credentials file is provided, uses it
-	// Otherwise, uses the default credentials
-	if cfg.CredentialsFile != "" {
-		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialsFile))
+	if cfg.CredentialFile != "" {
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialFile))
 	} else {
 		client, err = secretmanager.NewClient(ctx)
 	}
@@ -158,14 +131,13 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	derivedCtx, cancel := context.WithCancel(ctx)
 
 	watcher := &GcpSecretsWatcher{
-		Config:          *cfg,
-		lastKnownETags:  make(map[string]string),
-		client:          client,
-		ctx:             derivedCtx,
-		cancel:          cancel,
+		Config:        *cfg,
+		lastKnownETag: "",
+		client:        client,
+		ctx:           derivedCtx,
+		cancel:        cancel,
 	}
 
-	// Closes the client when the watcher is stopped
 	go func() {
 		<-watcher.ctx.Done()
 		if watcher.client != nil {
@@ -178,75 +150,62 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	return watcher, nil
 }
 
-// Retrieves the latest ETag of the secret
-// from GCP Secrets Manager
-func (w *GcpSecretsWatcher) getSecretEtag(project string) (string, error) {
-	name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, w.SecretName)
+// Retrieves the latest ETag of the secret from GCP Secrets Manager
+func (w *GcpSecretsWatcher) getSecretEtag(projectID string) (string, error) {
+	name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, w.SecretName)
 	req := &secretmanagerpb.GetSecretVersionRequest{
 		Name: name,
 	}
 
 	resp, err := w.client.GetSecretVersion(w.ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("failed to access secret version %s in %s: %v", w.SecretName, project, err)
+		return "", fmt.Errorf("failed to access secret version %s in %s: %v", w.SecretName, projectID, err)
 	}
-
 	return resp.Etag, nil
 }
 
-// Retrieves the latest value of the secret
-// from GCP Secrets Manager
-func (w *GcpSecretsWatcher) getSecretValue(project string) (string, error) {
-    name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, w.SecretName)
-    req := &secretmanagerpb.AccessSecretVersionRequest{
-        Name: name,
-    }
+// Retrieves the latest value of the secret from GCP Secrets Manager
+func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
+	name := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, w.SecretName)
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: name,
+	}
 
-    resp, err := w.client.AccessSecretVersion(w.ctx, req)
-    if err != nil {
-        return "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, project, err)
-    }
-    return string(resp.Payload.Data), nil
+	resp, err := w.client.AccessSecretVersion(w.ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, projectID, err)
+	}
+	return string(resp.Payload.Data), nil
 }
 
+// Watches the GCP Secrets Manager for changes in ETag and sends the new value
+// to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
-	log.Println("starting GCP Secrets Manager watcher (using ETags for change detection)")
-
-	w.lastKnownETags = make(map[string]string)
+	log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
 
 	for {
 		select {
 		case <-w.ctx.Done():
-			log.Println("GCP Secrets Manager watcher (using NewClient) stopped")
+			log.Println("GCP Secrets Manager watcher stopped")
 			return
 		default:
-			etagChanged := false
-			updatedProjects := make(map[string]string)
+			etag, err := w.getSecretEtag(w.ProjectID)
+			if err != nil {
+				log.Printf("error getting secret ETag: %v", err)
+				time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
+				continue
+			}
 
-			for _, project := range w.Projects {
-				etag, err := w.getSecretEtag(project)
+			if etag != w.lastKnownETag {
+				log.Printf("ETag changed for secret %s in project %s", w.SecretName, w.ProjectID)
+				secretValue, err := w.getSecretValue(w.ProjectID)
 				if err != nil {
-					log.Printf("error getting ETag for secret %s in %s: %v", w.SecretName, project, err)
+					log.Printf("error getting secret value: %v", err)
 					time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
 					continue
 				}
-
-				lastEtag, known := w.lastKnownETags[project]
-				if !known || etag != lastEtag {
-					log.Printf("ETag changed for secret %s in project %s", w.SecretName, project)
-					etagChanged = true
-					secretValue, err := w.getSecretValue(project)
-					if err != nil {
-						log.Printf("error getting secret value for %s: %v", project, err)
-						continue
-					}
-					updatedProjects[project] = secretValue
-					w.lastKnownETags[project] = etag
-				}
-			}
-
-			if etagChanged {
-				change <- updatedProjects
+				change <- secretValue
+				w.lastKnownETag = etag
 			}
 
 			time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
@@ -254,10 +213,8 @@ func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
 	}
 }
 
-// Called when the watcher is no longer needed
-// This function signals to the goroutine
-// to close the Secret Manager client
+// Stop signals the watcher to stop
 func (w *GcpSecretsWatcher) Stop() {
-	log.Println("shutting down GCP Secrets Manager watcher (using NewClient)")
+	log.Println("shutting down watcher")
 	w.cancel()
 }
