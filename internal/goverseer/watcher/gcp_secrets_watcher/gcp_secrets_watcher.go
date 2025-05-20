@@ -61,8 +61,8 @@ type GcpSecretsWatcher struct {
 	cancel        context.CancelFunc
 }
 
-// Parses the config for the watcher
-// Validates the config, sets defaults if missing, and returns the config
+// Parses and validates the config for the watcher, 
+// sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
 	cfg := &Config{
 		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
@@ -187,8 +187,8 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 	return string(resp.Payload.Data), nil
 }
 
-// Watches the GCP Secrets Manager for changes in ETag and sends the new value
-// to the changes channel
+// Watches the GCP Secrets Manager for changes in ETag 
+// and sends the new value to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
 	log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
 
