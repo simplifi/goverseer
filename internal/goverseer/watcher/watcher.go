@@ -6,8 +6,8 @@ import (
 	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/file_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/gce_metadata_watcher"
-	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
 	"github.com/simplifi/goverseer/internal/goverseer/watcher/gcp_secrets_watcher"
+	"github.com/simplifi/goverseer/internal/goverseer/watcher/time_watcher"
 )
 
 // Watcher is an interface for watching for changes
