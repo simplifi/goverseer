@@ -65,62 +65,62 @@ func TestNew(t *testing.T) {
 
 // Tests the Watch function for value changes based on ETag
 func TestGcpSecretsWatcher_Watch_EtagChange(t *testing.T) {
-    ctx, cancel := context.WithCancel(context.Background())
-    mockClient := new(mockSecretManagerClient)
+	ctx, cancel := context.WithCancel(context.Background())
+	mockClient := new(mockSecretManagerClient)
 
-    log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
+	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
 
-    // Sets expectation for the initial GetSecretVersion
-    mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-        &secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once() // Initial ETag
+	// Sets expectation for the initial GetSecretVersion
+	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once() // Initial ETag
 
-    // Sets expectation for the second GetSecretVersion (after the poll)
-    mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-        &secretmanagerpb.SecretVersion{Etag: "etag-2"}, nil).Once() // ETag changes
+	// Sets expectation for the second GetSecretVersion (after the poll)
+	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.SecretVersion{Etag: "etag-2"}, nil).Once() // ETag changes
 
-    // Sets expectation for AccessSecretVersion after the ETag change
-    mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-        &secretmanagerpb.AccessSecretVersionResponse{
-            Payload: &secretmanagerpb.SecretPayload{
-                Data: []byte("new-secret-value"),
-            },
-        }, nil).Once()
+	// Sets expectation for AccessSecretVersion after the ETag change
+	mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+		&secretmanagerpb.AccessSecretVersionResponse{
+			Payload: &secretmanagerpb.SecretPayload{
+				Data: []byte("new-secret-value"),
+			},
+		}, nil).Once()
 
-    watcher := GcpSecretsWatcher{
-        Config: Config{
-            ProjectID:              "test-project",
-            SecretName:             "test-secret",
-            CheckIntervalSeconds:   1,
-            SecretErrorWaitSeconds: 1,
-            SecretsFilePath:        "/tmp/test-secrets.txt",
-        },
-        client:        mockClient,
-        ctx:           ctx,
-        lastKnownETag: "etag-1",
-        cancel:        cancel,
-    }
+	watcher := GcpSecretsWatcher{
+		Config: Config{
+			ProjectID:              "test-project",
+			SecretName:             "test-secret",
+			CheckIntervalSeconds:   1,
+			SecretErrorWaitSeconds: 1,
+			SecretsFilePath:        "/tmp/test-secrets.txt",
+		},
+		client:        mockClient,
+		ctx:           ctx,
+		lastKnownETag: "etag-1",
+		cancel:        cancel,
+	}
 
-    changeChan := make(chan interface{}, 1)
-    stopChan := make(chan struct{})
+	changeChan := make(chan interface{}, 1)
+	stopChan := make(chan struct{})
 
-    go func() {
-        defer close(stopChan)
-        watcher.Watch(changeChan)
-    }()
+	go func() {
+		defer close(stopChan)
+		watcher.Watch(changeChan)
+	}()
 
-    select {
-    case value := <-changeChan:
-        expected := "new-secret-value"
-        assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel")
-        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
-        watcher.Stop()
-    case <-time.After(3 * time.Second):
-        t.Fatalf("Watch did not send a change within the timeout")
-    }
+	select {
+	case value := <-changeChan:
+		expected := "new-secret-value"
+		assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel")
+		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
+		watcher.Stop()
+	case <-time.After(3 * time.Second):
+		t.Fatalf("Watch did not send a change within the timeout")
+	}
 
-    <-stopChan
-    log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
-    mockClient.AssertExpectations(t)
+	<-stopChan
+	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
+	mockClient.AssertExpectations(t)
 }
 
 // Tests the Stop function
@@ -154,7 +154,6 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
 		cancel: cancel,
 	}
 
-	
 	stopChan := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(1)
