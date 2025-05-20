@@ -8,6 +8,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 )
 
@@ -44,11 +45,27 @@ type Config struct {
 	SecretsFilePath string
 }
 
+// SecretManagerClientInterface defines the methods from the Secret Manager
+// client that GcpSecretsWatcher uses.
+type SecretManagerClientInterface interface {
+	GetSecretVersion(ctx context.Context, req *secretmanagerpb.GetSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.SecretVersion, error)
+	AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.AccessSecretVersionResponse, error)
+	Close() error
+}
+
+type GcpSecretsWatcher struct {
+	Config
+	lastKnownETag string
+	client        SecretManagerClientInterface
+	ctx           context.Context
+	cancel        context.CancelFunc
+}
+
 // Parses the config for the watcher
 // Validates the config, sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
 	cfg := &Config{
-		CheckIntervalSeconds:    DefaultCheckIntervalSeconds,
+		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
 		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
 
@@ -98,14 +115,6 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 	}
 
 	return cfg, nil
-}
-
-type GcpSecretsWatcher struct {
-	Config
-	lastKnownETag string
-	client        *secretmanager.Client
-	ctx           context.Context
-	cancel        context.CancelFunc
 }
 
 // Creates a new GcpSecretsWatcher based on the passed config
