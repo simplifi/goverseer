@@ -28,7 +28,6 @@ executioner:
   config:
     shell: /bin/bash -euo pipefail -c
     command: |
-      #!/bin/bash
       NEW_LICENSE_KEY=$(cat "${GOVERSEER_DATA}")
       LICENSE_FILE="{{ .SecretsFilePath }}"
       echo "Writing new Nomad license key to $LICENSE_FILE"
