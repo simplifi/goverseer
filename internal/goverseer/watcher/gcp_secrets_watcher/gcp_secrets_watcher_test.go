@@ -13,6 +13,117 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Tests the ParseConfig function
+func TestParseConfig(t *testing.T) {
+	var parsedConfig *Config
+	var err error
+
+	// Test valid configuration
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"project_id":        "test-project",
+		"secret_name":       "test-secret",
+		"secrets_file_path": "/tmp/test-secrets.txt",
+	})
+	assert.NoError(t, err, "Parsing a valid config should not return an error")
+	assert.Equal(t, "test-project", parsedConfig.ProjectID, "ProjectID should be set correctly")
+	assert.Equal(t, "test-secret", parsedConfig.SecretName, "SecretName should be set correctly")
+	assert.Equal(t, "/tmp/test-secrets.txt", parsedConfig.SecretsFilePath, "SecretsFilePath should be set correctly")
+	assert.Equal(t, DefaultCheckIntervalSeconds, parsedConfig.CheckIntervalSeconds, "Default CheckIntervalSeconds should be used")
+	assert.Equal(t, DefaultSecretErrorWaitSeconds, parsedConfig.SecretErrorWaitSeconds, "Default SecretErrorWaitSeconds should be used")
+	assert.Empty(t, parsedConfig.CredentialsFile, "CredentialsFile should be empty")
+
+	// Test valid configuration with optional fields
+	parsedConfig, err = ParseConfig(map[string]interface{}{
+		"project_id":                "test-project",
+		"secret_name":               "test-secret",
+		"credentials_file":          "/path/to/creds.json",
+		"check_interval_seconds":    120,
+		"secret_error_wait_seconds": 10,
+		"secrets_file_path":         "/tmp/test-secrets.txt",
+	})
+	assert.NoError(t, err, "Parsing a valid config with all options should not return an error")
+	assert.Equal(t, "test-project", parsedConfig.ProjectID, "ProjectID should be set correctly")
+	assert.Equal(t, "test-secret", parsedConfig.SecretName, "SecretName should be set correctly")
+	assert.Equal(t, "/path/to/creds.json", parsedConfig.CredentialsFile, "CredentialsFile should be set")
+	assert.Equal(t, 120, parsedConfig.CheckIntervalSeconds, "CheckIntervalSeconds should be set")
+	assert.Equal(t, 10, parsedConfig.SecretErrorWaitSeconds, "SecretErrorWaitSeconds should be set")
+	assert.Equal(t, "/tmp/test-secrets.txt", parsedConfig.SecretsFilePath, "SecretsFilePath should be set correctly")
+
+	// Test missing required fields
+	_, err = ParseConfig(map[string]interface{}{
+		"secret_name":       "test-secret",
+		"secrets_file_path": "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config without project_id should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":        "test-project",
+		"secrets_file_path": "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config without secret_name should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":  "test-project",
+		"secret_name": "test-secret",
+	})
+	assert.Error(t, err, "Parsing a config without secrets_file_path should return an error")
+
+	// Test invalid optional fields
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":             "test-project",
+		"secret_name":            "test-secret",
+		"check_interval_seconds": 0,
+		"secrets_file_path":      "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with non-positive check_interval_seconds should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":                "test-project",
+		"secret_name":               "test-secret",
+		"secret_error_wait_seconds": 0,
+		"secrets_file_path":         "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with non-positive secret_error_wait_seconds should return an error")
+
+	// Test invalid field types
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":        123,
+		"secret_name":       "test-secret",
+		"secrets_file_path": "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with invalid project_id type should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":        "test-project",
+		"secret_name":       123,
+		"secrets_file_path": "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with invalid secret_name type should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":        "test-project",
+		"secret_name":       "test-secret",
+		"secrets_file_path": 123,
+	})
+	assert.Error(t, err, "Parsing a config with invalid secrets_file_path type should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":             "test-project",
+		"secret_name":            "test-secret",
+		"check_interval_seconds": "abc",
+		"secrets_file_path":      "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with invalid check_interval_seconds type should return an error")
+
+	_, err = ParseConfig(map[string]interface{}{
+		"project_id":                "test-project",
+		"secret_name":               "test-secret",
+		"secret_error_wait_seconds": "abc",
+		"secrets_file_path":         "/tmp/test-secrets.txt",
+	})
+	assert.Error(t, err, "Parsing a config with invalid secret_error_wait_seconds type should return an error")
+}
+
 // Mock Secret Manager client for testing
 type mockSecretManagerClient struct {
 	mock.Mock

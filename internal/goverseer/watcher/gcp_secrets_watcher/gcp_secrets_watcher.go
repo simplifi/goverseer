@@ -30,7 +30,7 @@ type Config struct {
 
 	// CredentialsFile is the path to the GCP credentials file
 	// If not set, the default ADC will be used
-	CredentialFile string
+	CredentialsFile string
 
 	// The interval in seconds to poll the secret
 	// Default is 60 seconds
@@ -61,7 +61,7 @@ type GcpSecretsWatcher struct {
 	cancel        context.CancelFunc
 }
 
-// Parses and validates the config for the watcher, 
+// Parses and validates the config for the watcher,
 // sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
 	cfg := &Config{
@@ -87,22 +87,30 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		return nil, fmt.Errorf("secret_name is required")
 	}
 
-	if credentialFileRaw, ok := config["credential_file"].(string); ok {
-		cfg.CredentialFile = credentialFileRaw
+	if credentialsFileRaw, ok := config["credentials_file"].(string); ok {
+		cfg.CredentialsFile = credentialsFileRaw
 	}
 
-	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"].(int); ok {
-		if checkIntervalSecondsRaw <= 0 {
-			return nil, fmt.Errorf("check_interval_seconds must be a positive integer")
+	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"]; ok {
+		if checkIntervalSeconds, isInt := checkIntervalSecondsRaw.(int); isInt {
+			if checkIntervalSeconds <= 0 {
+				return nil, fmt.Errorf("check_interval_seconds must be a positive integer")
+			}
+			cfg.CheckIntervalSeconds = checkIntervalSeconds
+		} else if checkIntervalSecondsRaw != nil {
+			return nil, fmt.Errorf("check_interval_seconds must be an integer")
 		}
-		cfg.CheckIntervalSeconds = checkIntervalSecondsRaw
 	}
 
-	if secretErrorWaitSecondsRaw, ok := config["secret_error_wait_seconds"].(int); ok {
-		if secretErrorWaitSecondsRaw <= 0 {
-			return nil, fmt.Errorf("secret_error_wait_seconds must be a positive integer")
+	if secretErrorWaitSecondsRaw, ok := config["secret_error_wait_seconds"]; ok {
+		if secretErrorWaitSeconds, isInt := secretErrorWaitSecondsRaw.(int); isInt {
+			if secretErrorWaitSeconds <= 0 {
+				return nil, fmt.Errorf("secret_error_wait_seconds must be a positive integer")
+			}
+			cfg.SecretErrorWaitSeconds = secretErrorWaitSeconds
+		} else if secretErrorWaitSecondsRaw != nil {
+			return nil, fmt.Errorf("secret_error_wait_seconds must be an integer")
 		}
-		cfg.SecretErrorWaitSeconds = secretErrorWaitSecondsRaw
 	}
 
 	if secretsFilePathRaw, ok := config["secrets_file_path"].(string); ok {
@@ -128,8 +136,8 @@ func New(config map[string]interface{}) (*GcpSecretsWatcher, error) {
 	var client *secretmanager.Client
 
 	// Creates a new GCP Secrets Manager client
-	if cfg.CredentialFile != "" {
-		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialFile))
+	if cfg.CredentialsFile != "" {
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(cfg.CredentialsFile))
 	} else {
 		client, err = secretmanager.NewClient(ctx)
 	}
@@ -187,7 +195,7 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 	return string(resp.Payload.Data), nil
 }
 
-// Watches the GCP Secrets Manager for changes in ETag 
+// Watches the GCP Secrets Manager for changes in ETag
 // and sends the new value to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
 	log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
