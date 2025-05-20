@@ -45,7 +45,7 @@ type Config struct {
 	SecretsFilePath string
 }
 
-// SecretManagerClientInterface defines the methods from the Secret Manager
+// Defines the methods from the Secret Manager
 // client that GcpSecretsWatcher uses.
 type SecretManagerClientInterface interface {
 	GetSecretVersion(ctx context.Context, req *secretmanagerpb.GetSecretVersionRequest, opts ...gax.CallOption) (*secretmanagerpb.SecretVersion, error)
@@ -61,6 +61,45 @@ type GcpSecretsWatcher struct {
 	cancel        context.CancelFunc
 }
 
+// Parses a required string field from config
+func parseRequiredString(cfgMap map[string]interface{}, fieldName string) (string, error) {
+	if raw, ok := cfgMap[fieldName]; ok {
+		if val, isString := raw.(string); isString {
+			if val == "" {
+				return "", fmt.Errorf("%s must not be empty and is required", fieldName)
+			}
+			return val, nil
+		}
+		return "", fmt.Errorf("%s must be a string", fieldName)
+	}
+	return "", fmt.Errorf("%s is required", fieldName)
+}
+
+// Parse an optional string field from config
+func parseOptionalString(cfgMap map[string]interface{}, fieldName string) (string, error) {
+	if raw, ok := cfgMap[fieldName]; ok {
+		if val, isString := raw.(string); isString {
+			return val, nil
+		}
+		return "", fmt.Errorf("%s must be a string", fieldName)
+	}
+	return "", nil
+}
+
+// Parse an optional positive integer field from config
+func parseOptionalPositiveInt(cfgMap map[string]interface{}, fieldName string) (int, error) {
+	if raw, ok := cfgMap[fieldName]; ok {
+		if val, isInt := raw.(int); isInt {
+			if val <= 0 {
+				return 0, fmt.Errorf("%s must be a positive integer", fieldName)
+			}
+			return val, nil
+		}
+		return 0, fmt.Errorf("%s must be an integer", fieldName)
+	}
+	return 0, nil
+}
+
 // Parses and validates the config for the watcher,
 // sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
@@ -68,58 +107,38 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
 		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
+	var err error
 
-	if projectIDRaw, ok := config["project_id"].(string); ok {
-		if projectIDRaw == "" {
-			return nil, fmt.Errorf("project_id must not be empty")
-		}
-		cfg.ProjectID = projectIDRaw
-	} else {
-		return nil, fmt.Errorf("project_id is required")
+	cfg.ProjectID, err = parseRequiredString(config, "project_id")
+	if err != nil {
+		return nil, err
 	}
 
-	if secretNameRaw, ok := config["secret_name"].(string); ok {
-		if secretNameRaw == "" {
-			return nil, fmt.Errorf("secret_name must not be empty")
-		}
-		cfg.SecretName = secretNameRaw
-	} else {
-		return nil, fmt.Errorf("secret_name is required")
+	cfg.SecretName, err = parseRequiredString(config, "secret_name")
+	if err != nil {
+		return nil, err
 	}
 
-	if credentialsFileRaw, ok := config["credentials_file"].(string); ok {
-		cfg.CredentialsFile = credentialsFileRaw
+	cfg.CredentialsFile, err = parseOptionalString(config, "credentials_file")
+	if err != nil {
+		return nil, err
 	}
 
-	if checkIntervalSecondsRaw, ok := config["check_interval_seconds"]; ok {
-		if checkIntervalSeconds, isInt := checkIntervalSecondsRaw.(int); isInt {
-			if checkIntervalSeconds <= 0 {
-				return nil, fmt.Errorf("check_interval_seconds must be a positive integer")
-			}
-			cfg.CheckIntervalSeconds = checkIntervalSeconds
-		} else if checkIntervalSecondsRaw != nil {
-			return nil, fmt.Errorf("check_interval_seconds must be an integer")
-		}
+	if val, err := parseOptionalPositiveInt(config, "check_interval_seconds"); err != nil {
+		return nil, err
+	} else if val != 0 {
+		cfg.CheckIntervalSeconds = val
 	}
 
-	if secretErrorWaitSecondsRaw, ok := config["secret_error_wait_seconds"]; ok {
-		if secretErrorWaitSeconds, isInt := secretErrorWaitSecondsRaw.(int); isInt {
-			if secretErrorWaitSeconds <= 0 {
-				return nil, fmt.Errorf("secret_error_wait_seconds must be a positive integer")
-			}
-			cfg.SecretErrorWaitSeconds = secretErrorWaitSeconds
-		} else if secretErrorWaitSecondsRaw != nil {
-			return nil, fmt.Errorf("secret_error_wait_seconds must be an integer")
-		}
+	if val, err := parseOptionalPositiveInt(config, "secret_error_wait_seconds"); err != nil {
+		return nil, err
+	} else if val != 0 {
+		cfg.SecretErrorWaitSeconds = val
 	}
 
-	if secretsFilePathRaw, ok := config["secrets_file_path"].(string); ok {
-		if secretsFilePathRaw == "" {
-			return nil, fmt.Errorf("secrets_file_path must not be empty")
-		}
-		cfg.SecretsFilePath = secretsFilePathRaw
-	} else {
-		return nil, fmt.Errorf("secrets_file_path is required")
+	cfg.SecretsFilePath, err = parseRequiredString(config, "secrets_file_path")
+	if err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
@@ -198,36 +217,41 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 // Watches the GCP Secrets Manager for changes in ETag
 // and sends the new value to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
-	log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
+    log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
 
-	for {
-		select {
-		case <-w.ctx.Done():
-			log.Println("GCP Secrets Manager watcher stopped")
-			return
-		default:
-			etag, err := w.getSecretEtag(w.ProjectID)
-			if err != nil {
-				log.Printf("error getting secret ETag: %v", err)
-				time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
-				continue
-			}
+    for {
+        select {
+        case <-w.ctx.Done():
+            log.Println("GCP Secrets Manager watcher stopped")
+            return
+        default:
+            // Gets ETag
+            etag, err := w.getSecretEtag(w.ProjectID)
+            if err != nil {
+                log.Printf("ERROR: Failed to get ETag for secret %s in %s: %v", w.SecretName, w.ProjectID, err)
+                time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
+                continue
+            }
 
-			if etag != w.lastKnownETag {
-				log.Printf("ETag changed for secret %s in project %s", w.SecretName, w.ProjectID)
-				secretValue, err := w.getSecretValue(w.ProjectID)
-				if err != nil {
-					log.Printf("error getting secret value: %v", err)
-					time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
-					continue
-				}
-				change <- secretValue
-				w.lastKnownETag = etag
-			}
+            // Checks for ETag change
+            if etag != w.lastKnownETag {
+                log.Printf("ETag changed for secret %s in project %s", w.SecretName, w.ProjectID)
 
-			time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
-		}
-	}
+                // Gets Secret Value (only if ETag changed)
+                secretValue, err := w.getSecretValue(w.ProjectID)
+                if err != nil {
+                    log.Printf("ERROR: Failed to get secret value for %s in %s: %v", w.SecretName, w.ProjectID, err)
+                    time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
+                    continue
+                }
+
+                change <- secretValue
+                w.lastKnownETag = etag
+            }
+
+            time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
+        }
+    }
 }
 
 // Stop signals the watcher to stop
