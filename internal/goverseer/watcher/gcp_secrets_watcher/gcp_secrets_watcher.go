@@ -75,7 +75,7 @@ func parseRequiredString(cfgMap map[string]interface{}, fieldName string) (strin
 	return "", fmt.Errorf("%s is required", fieldName)
 }
 
-// Parse an optional string field from config
+// Parses an optional string field from config
 func parseOptionalString(cfgMap map[string]interface{}, fieldName string) (string, error) {
 	if raw, ok := cfgMap[fieldName]; ok {
 		if val, isString := raw.(string); isString {
@@ -86,7 +86,7 @@ func parseOptionalString(cfgMap map[string]interface{}, fieldName string) (strin
 	return "", nil
 }
 
-// Parse an optional positive integer field from config
+// Parses an optional positive integer field from config
 func parseOptionalPositiveInt(cfgMap map[string]interface{}, fieldName string) (int, error) {
 	if raw, ok := cfgMap[fieldName]; ok {
 		if val, isInt := raw.(int); isInt {

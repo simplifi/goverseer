@@ -15,113 +15,192 @@ import (
 
 // Tests the ParseConfig function
 func TestParseConfig(t *testing.T) {
-	var parsedConfig *Config
-	var err error
-
-	// Test valid configuration
-	parsedConfig, err = ParseConfig(map[string]interface{}{
-		"project_id":        "test-project",
-		"secret_name":       "test-secret",
-		"secrets_file_path": "/tmp/test-secrets.txt",
-	})
-	assert.NoError(t, err, "Parsing a valid config should not return an error")
-	assert.Equal(t, "test-project", parsedConfig.ProjectID, "ProjectID should be set correctly")
-	assert.Equal(t, "test-secret", parsedConfig.SecretName, "SecretName should be set correctly")
-	assert.Equal(t, "/tmp/test-secrets.txt", parsedConfig.SecretsFilePath, "SecretsFilePath should be set correctly")
-	assert.Equal(t, DefaultCheckIntervalSeconds, parsedConfig.CheckIntervalSeconds, "Default CheckIntervalSeconds should be used")
-	assert.Equal(t, DefaultSecretErrorWaitSeconds, parsedConfig.SecretErrorWaitSeconds, "Default SecretErrorWaitSeconds should be used")
-	assert.Empty(t, parsedConfig.CredentialsFile, "CredentialsFile should be empty")
-
-	// Test valid configuration with optional fields
-	parsedConfig, err = ParseConfig(map[string]interface{}{
-		"project_id":                "test-project",
-		"secret_name":               "test-secret",
-		"credentials_file":          "/path/to/creds.json",
-		"check_interval_seconds":    120,
-		"secret_error_wait_seconds": 10,
-		"secrets_file_path":         "/tmp/test-secrets.txt",
-	})
-	assert.NoError(t, err, "Parsing a valid config with all options should not return an error")
-	assert.Equal(t, "test-project", parsedConfig.ProjectID, "ProjectID should be set correctly")
-	assert.Equal(t, "test-secret", parsedConfig.SecretName, "SecretName should be set correctly")
-	assert.Equal(t, "/path/to/creds.json", parsedConfig.CredentialsFile, "CredentialsFile should be set")
-	assert.Equal(t, 120, parsedConfig.CheckIntervalSeconds, "CheckIntervalSeconds should be set")
-	assert.Equal(t, 10, parsedConfig.SecretErrorWaitSeconds, "SecretErrorWaitSeconds should be set")
-	assert.Equal(t, "/tmp/test-secrets.txt", parsedConfig.SecretsFilePath, "SecretsFilePath should be set correctly")
-
-	// Test missing required fields
-	_, err = ParseConfig(map[string]interface{}{
-		"secret_name":       "test-secret",
-		"secrets_file_path": "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config without project_id should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":        "test-project",
-		"secrets_file_path": "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config without secret_name should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":  "test-project",
-		"secret_name": "test-secret",
-	})
-	assert.Error(t, err, "Parsing a config without secrets_file_path should return an error")
-
-	// Test invalid optional fields
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":             "test-project",
-		"secret_name":            "test-secret",
-		"check_interval_seconds": 0,
-		"secrets_file_path":      "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with non-positive check_interval_seconds should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":                "test-project",
-		"secret_name":               "test-secret",
-		"secret_error_wait_seconds": 0,
-		"secrets_file_path":         "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with non-positive secret_error_wait_seconds should return an error")
-
-	// Test invalid field types
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":        123,
-		"secret_name":       "test-secret",
-		"secrets_file_path": "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with invalid project_id type should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":        "test-project",
-		"secret_name":       123,
-		"secrets_file_path": "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with invalid secret_name type should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":        "test-project",
-		"secret_name":       "test-secret",
-		"secrets_file_path": 123,
-	})
-	assert.Error(t, err, "Parsing a config with invalid secrets_file_path type should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":             "test-project",
-		"secret_name":            "test-secret",
-		"check_interval_seconds": "abc",
-		"secrets_file_path":      "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with invalid check_interval_seconds type should return an error")
-
-	_, err = ParseConfig(map[string]interface{}{
-		"project_id":                "test-project",
-		"secret_name":               "test-secret",
-		"secret_error_wait_seconds": "abc",
-		"secrets_file_path":         "/tmp/test-secrets.txt",
-	})
-	assert.Error(t, err, "Parsing a config with invalid secret_error_wait_seconds type should return an error")
+	tests := []struct {
+		name         string
+		inputConfig  map[string]interface{}
+		expectedConfig *Config
+		expectedError string
+	}{
+		{
+			name: "Valid - Full config",
+			inputConfig: map[string]interface{}{
+				"project_id":              "test-project-full",
+				"secret_name":             "test-secret-full",
+				"credentials_file":        "/path/to/full-creds.json",
+				"check_interval_seconds":  120,
+				"secret_error_wait_seconds": 10,
+				"secrets_file_path":         "/tmp/full-secrets.txt",
+			},
+			expectedConfig: &Config{
+				ProjectID:              "test-project-full",
+				SecretName:             "test-secret-full",
+				CredentialsFile:        "/path/to/full-creds.json",
+				CheckIntervalSeconds:   120,
+				SecretErrorWaitSeconds: 10,
+				SecretsFilePath:        "/tmp/full-secrets.txt",
+			},
+			expectedError: "", 
+		},
+		{
+			name: "Valid - Minimal config",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project-req",
+				"secret_name":       "test-secret-req",
+				"secrets_file_path": "/tmp/test-secrets-req.txt",
+			},
+			expectedConfig: &Config{
+				ProjectID:              "test-project-req",
+				SecretName:             "test-secret-req",
+				CheckIntervalSeconds:   DefaultCheckIntervalSeconds, 
+				SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds, 
+				SecretsFilePath:        "/tmp/test-secrets-req.txt",
+			},
+			expectedError: "",
+		},
+		{
+			name: "Invalid - Missing project_id",
+			inputConfig: map[string]interface{}{
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "project_id is required",
+		},
+		{
+			name: "Invalid - Empty project_id",
+			inputConfig: map[string]interface{}{
+				"project_id":        "",
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "project_id must not be empty and is required",
+		},
+		{
+			name: "Invalid - project_id wrong type",
+			inputConfig: map[string]interface{}{
+				"project_id":        123,
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "project_id must be a string",
+		},
+		{
+			name: "Invalid - Missing secret_name",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "secret_name is required",
+		},
+		{
+			name: "Invalid - Empty secret_name",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "secret_name must not be empty and is required",
+		},
+		{
+			name: "Invalid - secret_name wrong type",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       123,
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "secret_name must be a string",
+		},
+		{
+			name: "Invalid - Missing secrets_file_path",
+			inputConfig: map[string]interface{}{
+				"project_id":  "test-project",
+				"secret_name": "test-secret",
+			},
+			expectedConfig: nil,
+			expectedError:  "secrets_file_path is required",
+		},
+		{
+			name: "Invalid - Empty secrets_file_path",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "test-secret",
+				"secrets_file_path": "",
+			},
+			expectedConfig: nil,
+			expectedError:  "secrets_file_path must not be empty and is required",
+		},
+		{
+			name: "Invalid - secrets_file_path wrong type",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "test-secret",
+				"secrets_file_path": 123,
+			},
+			expectedConfig: nil,
+			expectedError:  "secrets_file_path must be a string",
+		},
+		{
+			name: "Invalid - check_interval_seconds non-positive",
+			inputConfig: map[string]interface{}{
+				"project_id":             "test-project",
+				"secret_name":            "test-secret",
+				"check_interval_seconds": 0,
+				"secrets_file_path":      "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "check_interval_seconds must be a positive integer",
+		},
+		{
+			name: "Invalid - check_interval_seconds wrong type",
+			inputConfig: map[string]interface{}{
+				"project_id":             "test-project",
+				"secret_name":            "test-secret",
+				"check_interval_seconds": "abc",
+				"secrets_file_path":      "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "check_interval_seconds must be an integer",
+		},
+		{
+			name: "Invalid - secret_error_wait_seconds non-positive",
+			inputConfig: map[string]interface{}{
+				"project_id":                "test-project",
+				"secret_name":               "test-secret",
+				"secret_error_wait_seconds": 0,
+				"secrets_file_path":         "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "secret_error_wait_seconds must be a positive integer",
+		},
+		{
+			name: "Invalid - secret_error_wait_seconds wrong type",
+			inputConfig: map[string]interface{}{
+				"project_id":                "test-project",
+				"secret_name":               "test-secret",
+				"secret_error_wait_seconds": "abc",
+				"secrets_file_path":         "/tmp/test-secrets.txt",
+			},
+			expectedConfig: nil,
+			expectedError:  "secret_error_wait_seconds must be an integer",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotConfig, err := ParseConfig(tt.inputConfig)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedConfig, gotConfig)
+			}
+		})
+	}
 }
 
 // Mock Secret Manager client for testing
@@ -150,88 +229,104 @@ func (m *mockSecretManagerClient) Close() error {
 	return args.Error(0)
 }
 
-// Ensure mockClient satisfies the SecretManagerClientInterface
+// Ensures mockClient satisfies the SecretManagerClientInterface
 var _ SecretManagerClientInterface = (*mockSecretManagerClient)(nil)
 
-// Tests the New function
+// Tests the New function with valid and invalid configs
 func TestNew(t *testing.T) {
-	validConfig := map[string]interface{}{
-		"project_id":        "test-project",
-		"secret_name":       "test-secret",
-		"secrets_file_path": "/tmp/test-secrets.txt",
+	tests := []struct {
+		name     string
+		inputConfig map[string]interface{}
+		expectedError bool
+	}{
+		{
+			name: "Valid config",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedError: false,
+		},
+		{
+			name: "Invalid config",
+			inputConfig: map[string]interface{}{
+				"project_id":        nil,
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			expectedError: true,
+		},
 	}
-	watcher, err := New(validConfig)
-	assert.NoError(t, err, "Creating a new GcpSecretsWatcher should not return an error")
-	assert.NotNil(t, watcher, "Creating a new GcpSecretsWatcher should return a watcher")
-
-	invalidConfig := map[string]interface{}{
-		"project_id":        nil,
-		"secret_name":       "test-secret",
-		"secrets_file_path": "/tmp/test-secrets.txt",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := New(tt.inputConfig)
+			if (err != nil) != tt.expectedError {
+				t.Errorf("New() error = %v, expectedError %v", err, tt.expectedError)
+			}
+		})
 	}
-	watcher, err = New(invalidConfig)
-	assert.Error(t, err, "Creating a new GcpSecretsWatcher with an invalid config should return an error")
-	assert.Nil(t, watcher, "Creating a new GcpSecretsWatcher with an invalid config should not return a watcher")
 }
 
-// Tests the Watch function for value changes based on ETag
+// Tests the Watch function
+// Simulates a change in the secret value,
+// checks if the watcher detects it,
+// and sends the new value to the change channel
 func TestGcpSecretsWatcher_Watch_EtagChange(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	mockClient := new(mockSecretManagerClient)
+    ctx, cancel := context.WithCancel(context.Background())
+    mockClient := new(mockSecretManagerClient)
 
-	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
+    log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
 
-	// Sets expectation for the initial GetSecretVersion
-	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-		&secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once() // Initial ETag
+    // Establishes expectation for the initial GetSecretVersion
+    mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+        &secretmanagerpb.SecretVersion{Etag: "etag-1"}, nil).Once()
 
-	// Sets expectation for the second GetSecretVersion (after the poll)
-	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-		&secretmanagerpb.SecretVersion{Etag: "etag-2"}, nil).Once() // ETag changes
+    // Establishes expectation for AccessSecretVersion
+    mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
+        &secretmanagerpb.AccessSecretVersionResponse{
+            Payload: &secretmanagerpb.SecretPayload{
+                Data: []byte("new-secret-value"),
+            },
+        }, nil).Once()
 
-	// Sets expectation for AccessSecretVersion after the ETag change
-	mockClient.On("AccessSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
-		&secretmanagerpb.AccessSecretVersionResponse{
-			Payload: &secretmanagerpb.SecretPayload{
-				Data: []byte("new-secret-value"),
-			},
-		}, nil).Once()
+    watcher := GcpSecretsWatcher{
+        Config: Config{
+            ProjectID:               "test-project",
+            SecretName:             "test-secret",
+            CheckIntervalSeconds:    1,
+            SecretErrorWaitSeconds: 1,
+            SecretsFilePath:        "/tmp/test-secrets.txt",
+        },
+        client:        mockClient,
+        ctx:           ctx,
+        lastKnownETag: "",
+        cancel:        cancel,
+    }
 
-	watcher := GcpSecretsWatcher{
-		Config: Config{
-			ProjectID:              "test-project",
-			SecretName:             "test-secret",
-			CheckIntervalSeconds:   1,
-			SecretErrorWaitSeconds: 1,
-			SecretsFilePath:        "/tmp/test-secrets.txt",
-		},
-		client:        mockClient,
-		ctx:           ctx,
-		lastKnownETag: "etag-1",
-		cancel:        cancel,
-	}
+    changeChan := make(chan interface{}, 1)
+    stopTestGoroutine := make(chan struct{})
 
-	changeChan := make(chan interface{}, 1)
-	stopChan := make(chan struct{})
+    go func() {
+        defer close(stopTestGoroutine)
+        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine started")
+        watcher.Watch(changeChan)
+        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine finished")
+    }()
 
-	go func() {
-		defer close(stopChan)
-		watcher.Watch(changeChan)
-	}()
+    select {
+    case value := <-changeChan:
+        expected := "new-secret-value"
+        assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel when ETag changes")
+        log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
+        watcher.Stop()
+    case <-time.After(time.Duration(watcher.Config.CheckIntervalSeconds)*2 * time.Second):
+        t.Fatalf("Watch did not send a change within the timeout")
+    }
 
-	select {
-	case value := <-changeChan:
-		expected := "new-secret-value"
-		assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel")
-		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
-		watcher.Stop()
-	case <-time.After(3 * time.Second):
-		t.Fatalf("Watch did not send a change within the timeout")
-	}
-
-	<-stopChan
-	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
-	mockClient.AssertExpectations(t)
+    <-stopTestGoroutine
+    log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
+    mockClient.AssertExpectations(t)
 }
 
 // Tests the Stop function
