@@ -13,35 +13,35 @@ import (
 )
 
 const (
-	// DefaultCheckIntervalSeconds is the default interval to check for secret changes
+	// Default interval to check for secret changes
 	DefaultCheckIntervalSeconds = 60
 
-	// DefaultSecretErrorWaitSeconds is the default number of seconds to wait
+	// Default number of seconds to wait
 	// before retrying a failed secret access.
 	DefaultSecretErrorWaitSeconds = 5
 )
 
 type Config struct {
-	// ProjectID is the GCP project ID where the secret is located
+	// GCP project ID where the secret is located
 	ProjectID string
 
-	// SecretName is the name of the secret to watch in the specified project
+	// Name of the secret to watch in the specified project
 	SecretName string
 
-	// CredentialsFile is the path to the GCP credentials file
+	// Path to the GCP credentials file
 	// If not set, the default ADC will be used
 	CredentialsFile string
 
-	// The interval in seconds to poll the secret
+	// Interval in seconds to poll the secret
 	// Default is 60 seconds
 	CheckIntervalSeconds int
 
-	// SecretErrorWaitSeconds is the number of seconds to wait
+	// Number of seconds to wait
 	// before retrying a failed secret access
 	// Default is 5 seconds
 	SecretErrorWaitSeconds int
 
-	// SecretsFilePath is the path to the file to update on the local VM
+	// Path to the file to update on the local VM
 	SecretsFilePath string
 }
 
@@ -217,44 +217,44 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 // Watches the GCP Secrets Manager for changes in ETag
 // and sends the new value to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
-    log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
+	log.Printf("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
 
-    for {
-        select {
-        case <-w.ctx.Done():
-            log.Println("GCP Secrets Manager watcher stopped")
-            return
-        default:
-            // Gets ETag
-            etag, err := w.getSecretEtag(w.ProjectID)
-            if err != nil {
-                log.Printf("ERROR: Failed to get ETag for secret %s in %s: %v", w.SecretName, w.ProjectID, err)
-                time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
-                continue
-            }
+	for {
+		select {
+		case <-w.ctx.Done():
+			log.Println("GCP Secrets Manager watcher stopped")
+			return
+		default:
+			// Gets ETag
+			etag, err := w.getSecretEtag(w.ProjectID)
+			if err != nil {
+				log.Printf("ERROR: Failed to get ETag for secret %s in %s: %v", w.SecretName, w.ProjectID, err)
+				time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
+				continue
+			}
 
-            // Checks for ETag change
-            if etag != w.lastKnownETag {
-                log.Printf("ETag changed for secret %s in project %s", w.SecretName, w.ProjectID)
+			// Checks for ETag change
+			if etag != w.lastKnownETag {
+				log.Printf("ETag changed for secret %s in project %s", w.SecretName, w.ProjectID)
 
-                // Gets Secret Value (only if ETag changed)
-                secretValue, err := w.getSecretValue(w.ProjectID)
-                if err != nil {
-                    log.Printf("ERROR: Failed to get secret value for %s in %s: %v", w.SecretName, w.ProjectID, err)
-                    time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
-                    continue
-                }
+				// Gets Secret Value (only if ETag changed)
+				secretValue, err := w.getSecretValue(w.ProjectID)
+				if err != nil {
+					log.Printf("ERROR: Failed to get secret value for %s in %s: %v", w.SecretName, w.ProjectID, err)
+					time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
+					continue
+				}
 
-                change <- secretValue
-                w.lastKnownETag = etag
-            }
+				change <- secretValue
+				w.lastKnownETag = etag
+			}
 
-            time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
-        }
-    }
+			time.Sleep(time.Duration(w.CheckIntervalSeconds) * time.Second)
+		}
+	}
 }
 
-// Stop signals the watcher to stop
+// Signals the watcher to stop
 func (w *GcpSecretsWatcher) Stop() {
 	log.Println("shutting down watcher")
 	w.cancel()
