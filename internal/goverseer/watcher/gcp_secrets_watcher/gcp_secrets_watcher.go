@@ -11,7 +11,6 @@ import (
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
-
 )
 
 const (
@@ -114,47 +113,47 @@ func parseOptionalPositiveInt(cfgMap map[string]interface{}, fieldName string) (
 // Parses and validates the config for the watcher,
 // sets defaults if missing, and returns the config
 func ParseConfig(config map[string]interface{}) (*Config, error) {
-    cfg := &Config{
-        CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
-        SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
-    }
-    var err error
+	cfg := &Config{
+		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
+		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
+	}
+	var err error
 
-	var val int 
+	var val int
 
-    cfg.ProjectID, err = parseRequiredString(config, "project_id")
-    if err != nil {
-        return nil, err
-    }
+	cfg.ProjectID, err = parseRequiredString(config, "project_id")
+	if err != nil {
+		return nil, err
+	}
 
-    cfg.SecretName, err = parseRequiredString(config, "secret_name")
-    if err != nil {
-        return nil, err
-    }
+	cfg.SecretName, err = parseRequiredString(config, "secret_name")
+	if err != nil {
+		return nil, err
+	}
 
-    cfg.CredentialsFile, err = parseOptionalString(config, "credentials_file")
-    if err != nil {
-        return nil, err
-    }
+	cfg.CredentialsFile, err = parseOptionalString(config, "credentials_file")
+	if err != nil {
+		return nil, err
+	}
 
-    if val, err = parseOptionalPositiveInt(config, "check_interval_seconds"); err != nil {
-        return nil, err
-    } else if val != 0 { 
-        cfg.CheckIntervalSeconds = val
-    }
+	if val, err = parseOptionalPositiveInt(config, "check_interval_seconds"); err != nil {
+		return nil, err
+	} else if val != 0 {
+		cfg.CheckIntervalSeconds = val
+	}
 
-    if val, err = parseOptionalPositiveInt(config, "secret_error_wait_seconds"); err != nil {
-        return nil, err
-    } else if val != 0 {
-        cfg.SecretErrorWaitSeconds = val
-    }
+	if val, err = parseOptionalPositiveInt(config, "secret_error_wait_seconds"); err != nil {
+		return nil, err
+	} else if val != 0 {
+		cfg.SecretErrorWaitSeconds = val
+	}
 
-    cfg.SecretsFilePath, err = parseRequiredString(config, "secrets_file_path")
-    if err != nil {
-        return nil, err
-    }
+	cfg.SecretsFilePath, err = parseRequiredString(config, "secrets_file_path")
+	if err != nil {
+		return nil, err
+	}
 
-    return cfg, nil
+	return cfg, nil
 }
 
 // Creates a new GcpSecretsWatcher based on the passed config
