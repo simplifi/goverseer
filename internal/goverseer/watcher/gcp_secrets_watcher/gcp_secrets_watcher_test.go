@@ -2,11 +2,11 @@ package gcp_secrets_watcher
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"testing"
 	"time"
-	"fmt"
 
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/googleapis/gax-go/v2"
@@ -204,18 +204,18 @@ func TestParseConfig(t *testing.T) {
 	}
 }
 
- // A mock implementation of SecretManagerClientFactory
-  type mockSecretManagerClientFactory struct {
-      mock.Mock
-  }
+// A mock implementation of SecretManagerClientFactory
+type mockSecretManagerClientFactory struct {
+	mock.Mock
+}
 
-  func (m *mockSecretManagerClientFactory) CreateClient(ctx context.Context, credentialFile string) (SecretManagerClientInterface, error) {
-      args := m.Called(ctx, credentialFile)
-      if client, ok := args.Get(0).(SecretManagerClientInterface); ok {
-          return client, args.Error(1)
-      }
-      return nil, args.Error(1)
-  }
+func (m *mockSecretManagerClientFactory) CreateClient(ctx context.Context, credentialFile string) (SecretManagerClientInterface, error) {
+	args := m.Called(ctx, credentialFile)
+	if client, ok := args.Get(0).(SecretManagerClientInterface); ok {
+		return client, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
 
 // Mock Secret Manager client for testing
 type mockSecretManagerClient struct {
@@ -244,98 +244,98 @@ func (m *mockSecretManagerClient) Close() error {
 }
 
 // Tests the New function with valid and invalid configs
- func TestNew(t *testing.T) {
-      tests := []struct {
-          name          string
-          inputConfig   map[string]interface{}
-          mockFactory   *mockSecretManagerClientFactory
-          mockClient    *mockSecretManagerClient
-          expectedError string
-      }{
-          {
-              name: "Valid config",
-              inputConfig: map[string]interface{}{
-                  "project_id":        "test-project",
-                  "secret_name":       "test-secret",
-                  "secrets_file_path": "/tmp/test-secrets.txt",
-                  "credentials_file":  "/path/to/mock-creds.json",
-              },
-              mockFactory: new(mockSecretManagerClientFactory),
-              mockClient:  new(mockSecretManagerClient),
-              expectedError: "",
-          },
-          {
-              name: "Valid config - ADC (no creds file)",
-              inputConfig: map[string]interface{}{
-                  "project_id":        "test-project-adc",
-                  "secret_name":       "test-secret-adc",
-                  "secrets_file_path": "/tmp/test-secrets-adc.txt",
-              },
-              mockFactory: new(mockSecretManagerClientFactory),
-              mockClient:  new(mockSecretManagerClient),
-              expectedError: "",
-          },
-          {
-              name: "Invalid config - Missing project_id",
-              inputConfig: map[string]interface{}{
-                  "secret_name":       "test-secret",
-                  "secrets_file_path": "/tmp/test-secrets.txt",
-              },
-              mockFactory:   nil,
-              mockClient:    nil,
-              expectedError: "project_id is required",
-          },
-          {
-              name: "Invalid config - Client creation error",
-              inputConfig: map[string]interface{}{
-                  "project_id":        "test-project",
-                  "secret_name":       "test-secret",
-                  "secrets_file_path": "/tmp/test-secrets.txt",
-                  "credentials_file":  "/path/to/bad-creds.json",
-              },
-              mockFactory: new(mockSecretManagerClientFactory),
-              mockClient:  nil,
-              expectedError: "failed to create Secrets Manager client: mock client creation error",
-          },
-      }
+func TestNew(t *testing.T) {
+	tests := []struct {
+		name          string
+		inputConfig   map[string]interface{}
+		mockFactory   *mockSecretManagerClientFactory
+		mockClient    *mockSecretManagerClient
+		expectedError string
+	}{
+		{
+			name: "Valid config",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+				"credentials_file":  "/path/to/mock-creds.json",
+			},
+			mockFactory:   new(mockSecretManagerClientFactory),
+			mockClient:    new(mockSecretManagerClient),
+			expectedError: "",
+		},
+		{
+			name: "Valid config - ADC (no creds file)",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project-adc",
+				"secret_name":       "test-secret-adc",
+				"secrets_file_path": "/tmp/test-secrets-adc.txt",
+			},
+			mockFactory:   new(mockSecretManagerClientFactory),
+			mockClient:    new(mockSecretManagerClient),
+			expectedError: "",
+		},
+		{
+			name: "Invalid config - Missing project_id",
+			inputConfig: map[string]interface{}{
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+			},
+			mockFactory:   nil,
+			mockClient:    nil,
+			expectedError: "project_id is required",
+		},
+		{
+			name: "Invalid config - Client creation error",
+			inputConfig: map[string]interface{}{
+				"project_id":        "test-project",
+				"secret_name":       "test-secret",
+				"secrets_file_path": "/tmp/test-secrets.txt",
+				"credentials_file":  "/path/to/bad-creds.json",
+			},
+			mockFactory:   new(mockSecretManagerClientFactory),
+			mockClient:    nil,
+			expectedError: "failed to create Secrets Manager client: mock client creation error",
+		},
+	}
 
-      for _, tt := range tests {
-          t.Run(tt.name, func(t *testing.T) {
-              // Set up factory expectations (only if mockFactory is provided)
-              if tt.mockFactory != nil {
-                  tt.mockFactory.On("CreateClient", mock.Anything, mock.AnythingOfType("string")).Return(tt.mockClient, fmt.Errorf("mock client creation error")).Maybe()
-                  if tt.expectedError == "" {
-                       tt.mockFactory.ExpectedCalls = []*mock.Call{}
-                       tt.mockFactory.On("CreateClient", mock.Anything, mock.AnythingOfType("string")).Return(tt.mockClient, nil).Once()
-                  }
-              }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up factory expectations (only if mockFactory is provided)
+			if tt.mockFactory != nil {
+				tt.mockFactory.On("CreateClient", mock.Anything, mock.AnythingOfType("string")).Return(tt.mockClient, fmt.Errorf("mock client creation error")).Maybe()
+				if tt.expectedError == "" {
+					tt.mockFactory.ExpectedCalls = []*mock.Call{}
+					tt.mockFactory.On("CreateClient", mock.Anything, mock.AnythingOfType("string")).Return(tt.mockClient, nil).Once()
+				}
+			}
 
-              // Pass the mock factory to New
-              var watcher *GcpSecretsWatcher
-              var err error
-              if tt.mockFactory != nil {
-                  watcher, err = New(tt.inputConfig, tt.mockFactory)
-              } else {
-                  watcher, err = New(tt.inputConfig)
-              }
+			// Pass the mock factory to New
+			var watcher *GcpSecretsWatcher
+			var err error
+			if tt.mockFactory != nil {
+				watcher, err = New(tt.inputConfig, tt.mockFactory)
+			} else {
+				watcher, err = New(tt.inputConfig)
+			}
 
-              if tt.expectedError != "" {
-                  assert.Error(t, err, "Expected an error but got none")
-                  assert.Contains(t, err.Error(), tt.expectedError, "Error message should contain expected text")
-                  assert.Nil(t, watcher, "Watcher should be nil on error")
-              } else {
-                  assert.NoError(t, err, "Expected no error but got one")
-                  assert.NotNil(t, watcher, "Watcher should not be nil")
-                  assert.NotNil(t, watcher.client, "Watcher client should not be nil")
-                  assert.Equal(t, tt.mockClient, watcher.client, "Watcher should use the injected mock client")
-              }
+			if tt.expectedError != "" {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.Contains(t, err.Error(), tt.expectedError, "Error message should contain expected text")
+				assert.Nil(t, watcher, "Watcher should be nil on error")
+			} else {
+				assert.NoError(t, err, "Expected no error but got one")
+				assert.NotNil(t, watcher, "Watcher should not be nil")
+				assert.NotNil(t, watcher.client, "Watcher client should not be nil")
+				assert.Equal(t, tt.mockClient, watcher.client, "Watcher should use the injected mock client")
+			}
 
-              if tt.mockFactory != nil {
-                  tt.mockFactory.AssertExpectations(t)
-              }
-          })
-      }
-  }
+			if tt.mockFactory != nil {
+				tt.mockFactory.AssertExpectations(t)
+			}
+		})
+	}
+}
 
 // Tests the Watch function
 // Simulates a change in the secret value,

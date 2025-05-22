@@ -48,7 +48,7 @@ type Config struct {
 
 // Defines an interface for creating Secret Manager clients
 // Helpful for testing purposes, allowing us to mock the client creation
-type SecretManagerClientFactory interface {	
+type SecretManagerClientFactory interface {
 	CreateClient(ctx context.Context, credentialFile string) (SecretManagerClientInterface, error)
 }
 
@@ -183,47 +183,47 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 
 // Creates a new GcpSecretsWatcher based on the passed config
 func New(config map[string]interface{}, factory ...SecretManagerClientFactory) (*GcpSecretsWatcher, error) { // MODIFIED SIGNATURE
-      cfg, err := ParseConfig(config)
-      if err != nil {
-          return nil, err
-      }
+	cfg, err := ParseConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
-      ctx := context.Background()
-      var clientFactory SecretManagerClientFactory
+	ctx := context.Background()
+	var clientFactory SecretManagerClientFactory
 
-      if len(factory) > 0 && factory[0] != nil { // Check if factory was provided
-          clientFactory = factory[0]
-      } else {
-          clientFactory = &defaultSecretManagerClientFactory{} // Use the default factory
-      }
+	if len(factory) > 0 && factory[0] != nil { // Check if factory was provided
+		clientFactory = factory[0]
+	} else {
+		clientFactory = &defaultSecretManagerClientFactory{} // Use the default factory
+	}
 
-      client, err := clientFactory.CreateClient(ctx, cfg.CredentialsFile) // Use the factory to create client
-      if err != nil {
-          return nil, fmt.Errorf("failed to create Secrets Manager client: %w", err)
-      }
+	client, err := clientFactory.CreateClient(ctx, cfg.CredentialsFile) // Use the factory to create client
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Secrets Manager client: %w", err)
+	}
 
-      derivedCtx, cancel := context.WithCancel(ctx)
+	derivedCtx, cancel := context.WithCancel(ctx)
 
-      watcher := &GcpSecretsWatcher{
-          Config:        *cfg,
-          lastKnownETag: "",
-          client:        client,
-          ctx:           derivedCtx,
-          cancel:        cancel,
-          clientFactory: clientFactory,
-      }
+	watcher := &GcpSecretsWatcher{
+		Config:        *cfg,
+		lastKnownETag: "",
+		client:        client,
+		ctx:           derivedCtx,
+		cancel:        cancel,
+		clientFactory: clientFactory,
+	}
 
-      go func() {
-          <-watcher.ctx.Done()
-          if watcher.client != nil {
-              if err := watcher.client.Close(); err != nil {
+	go func() {
+		<-watcher.ctx.Done()
+		if watcher.client != nil {
+			if err := watcher.client.Close(); err != nil {
 				logger.Log.Error("error closing Secrets Manager client", "err", err)
-              }
-          }
-      }()
+			}
+		}
+	}()
 
-      return watcher, nil
-  }
+	return watcher, nil
+}
 
 // Retrieves the latest ETag of the secret from GCP Secrets Manager
 func (w *GcpSecretsWatcher) getSecretEtag(projectID string) (string, error) {
