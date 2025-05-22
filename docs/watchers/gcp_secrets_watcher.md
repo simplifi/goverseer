@@ -15,21 +15,24 @@ To use the GCP Secrets Manager Watcher, you need to configure it in your Goverse
 
 **Example Configuration:**
 
+This is a sample configuration for watching changes to the Nomad license key in a GCP Project's Secret Manager. With Goverseer running on the Nomad client, the license key on that file would be updated whenever there is a change in secret manager.
+
 ```yaml
-name: gcp_secrets_watcher_example
+name: nomad-license-watcher-dev
 watcher:
   type: gcp_secrets
   config:
     project_id: "nomad-dev-2f03"
     secret_name: "nomad-license-key"
     secrets_file_path: "/etc/nomad.d/nomad.hclic"
+    check_interval_seconds: 5
 executioner:
   type: shell
   config:
-    shell: /bin/bash -euo pipefail -c
+    shell: /bin/bash -lec
     command: |
       NEW_LICENSE_KEY=$(cat "${GOVERSEER_DATA}")
-      LICENSE_FILE="{{ .SecretsFilePath }}"
+      LICENSE_FILE="/tmp/test_license_file.txt"
       echo "Writing new Nomad license key to $LICENSE_FILE"
       echo "$NEW_LICENSE_KEY" | sudo tee "$LICENSE_FILE"
       echo "Restarting Nomad service..."
