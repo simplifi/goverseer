@@ -3,10 +3,11 @@ package gcp_secrets_watcher
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/simplifi/goverseer/internal/goverseer/logger"
 
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/googleapis/gax-go/v2"
@@ -345,7 +346,7 @@ func TestGcpSecretsWatcher_Watch_EtagChange(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	mockClient := new(mockSecretManagerClient)
 
-	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Started")
+	logger.Log.Info("TestGcpSecretsWatcher_Watch_EtagChange: Started")
 
 	// Establishes expectation for the initial GetSecretVersion
 	mockClient.On("GetSecretVersion", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -378,29 +379,29 @@ func TestGcpSecretsWatcher_Watch_EtagChange(t *testing.T) {
 
 	go func() {
 		defer close(stopTestGoroutine)
-		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine started")
+		logger.Log.Info("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine started")
 		watcher.Watch(changeChan)
-		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine finished")
+		logger.Log.Info("TestGcpSecretsWatcher_Watch_EtagChange: Watch goroutine finished")
 	}()
 
 	select {
 	case value := <-changeChan:
 		expected := "new-secret-value"
 		assert.Equal(t, expected, value, "Watch should send the new secret value on the change channel when ETag changes")
-		log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
+		logger.Log.Info("TestGcpSecretsWatcher_Watch_EtagChange: Change received:", value)
 		watcher.Stop()
 	case <-time.After(time.Duration(watcher.Config.CheckIntervalSeconds) * 2 * time.Second):
 		t.Fatalf("Watch did not send a change within the timeout")
 	}
 
 	<-stopTestGoroutine
-	log.Println("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
+	logger.Log.Info("TestGcpSecretsWatcher_Watch_EtagChange: Test finished")
 	mockClient.AssertExpectations(t)
 }
 
 // Tests the Stop function
 func TestGcpSecretsWatcher_Stop(t *testing.T) {
-	log.Println("TestGcpSecretsWatcher_Stop: Started")
+	logger.Log.Info("TestGcpSecretsWatcher_Stop: Started")
 	ctx, cancel := context.WithCancel(context.Background())
 	closed := make(chan bool, 1)
 	mockClient := new(mockSecretManagerClient)
@@ -436,9 +437,9 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
 	// Starts goroutine to simulate the Watch function
 	go func() {
 		defer wg.Done()
-		log.Println("TestGcpSecretsWatcher_Stop: Watch goroutine started")
+		logger.Log.Info("TestGcpSecretsWatcher_Stop: Watch goroutine started")
 		watcher.Watch(make(chan interface{}, 1))
-		log.Println("TestGcpSecretsWatcher_Stop: Watch goroutine finished")
+		logger.Log.Info("TestGcpSecretsWatcher_Stop: Watch goroutine finished")
 		close(stopChan)
 	}()
 
@@ -446,24 +447,24 @@ func TestGcpSecretsWatcher_Stop(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Calls Stop, waits for the goroutine to finish
-	log.Println("TestGcpSecretsWatcher_Stop: Calling watcher.Stop()")
+	logger.Log.Info("TestGcpSecretsWatcher_Stop: Calling watcher.Stop()")
 	watcher.Stop()
-	log.Println("TestGcpSecretsWatcher_Stop: Waiting for Watch goroutine")
+	logger.Log.Info("TestGcpSecretsWatcher_Stop: Waiting for Watch goroutine")
 	wg.Wait()
 
 	// Explicitly calls Close on the mock client
 	watcher.client.Close()
 
 	// Asserts that the client's Close method was called
-	log.Println("TestGcpSecretsWatcher_Stop: Asserting mock expectations")
+	logger.Log.Info("TestGcpSecretsWatcher_Stop: Asserting mock expectations")
 	mockClient.AssertExpectations(t)
-	log.Println("TestGcpSecretsWatcher_Stop: Finished")
+	logger.Log.Info("TestGcpSecretsWatcher_Stop: Finished")
 
 	select {
 	case <-closed:
-		log.Println("TestGcpSecretsWatcher_Stop: Client closed successfully")
+		logger.Log.Info("TestGcpSecretsWatcher_Stop: Client closed successfully")
 	case <-stopChan:
-		log.Println("TestGcpSecretsWatcher_Stop: Stop channel closed")
+		logger.Log.Info("TestGcpSecretsWatcher_Stop: Stop channel closed")
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Stop did not trigger client Close")
 	}

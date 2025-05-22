@@ -42,7 +42,7 @@ type Config struct {
 	// Default is 5 seconds
 	SecretErrorWaitSeconds int
 
-	// Path to the file to update on the local VM
+	// Path to the file to update with the secrets' value
 	SecretsFilePath string
 }
 
@@ -52,7 +52,7 @@ type SecretManagerClientFactory interface {
 	CreateClient(ctx context.Context, credentialFile string) (SecretManagerClientInterface, error)
 }
 
-// Default implementation that creates a real Secret Manager client
+// Creates a real Secret Manager client
 // Can be replaced with a mock implementation for testing
 type defaultSecretManagerClientFactory struct{}
 
@@ -191,14 +191,18 @@ func New(config map[string]interface{}, factory ...SecretManagerClientFactory) (
 	ctx := context.Background()
 	var clientFactory SecretManagerClientFactory
 
-	if len(factory) > 0 && factory[0] != nil { // Check if factory was provided
+	// Checks if factory was provided
+	if len(factory) > 0 && factory[0] != nil {
 		clientFactory = factory[0]
 	} else {
-		clientFactory = &defaultSecretManagerClientFactory{} // Use the default factory
+		// Uses the default factory if none was provided
+		clientFactory = &defaultSecretManagerClientFactory{}
 	}
 
-	client, err := clientFactory.CreateClient(ctx, cfg.CredentialsFile) // Use the factory to create client
+	// Uses the factory to create client
+	client, err := clientFactory.CreateClient(ctx, cfg.CredentialsFile)
 	if err != nil {
+
 		return nil, fmt.Errorf("failed to create Secrets Manager client: %w", err)
 	}
 
