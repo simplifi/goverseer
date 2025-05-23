@@ -311,7 +311,7 @@ func TestNew(t *testing.T) {
 				}
 			}
 
-			// Pass the mock factory to New
+			// Pass the mock factory to the New function
 			var watcher *GcpSecretsWatcher
 			var err error
 			if tt.mockFactory != nil {

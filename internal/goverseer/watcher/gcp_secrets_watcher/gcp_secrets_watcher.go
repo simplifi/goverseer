@@ -253,7 +253,7 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 
 	resp, err := w.client.AccessSecretVersion(w.ctx, req)
 	if err != nil {
-		logger.Log.Error("Failed to access secret version", "secret", w.SecretName, "project", projectID, "err", err)
+		return "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, projectID, err)
 	}
 	return string(resp.Payload.Data), nil
 }
