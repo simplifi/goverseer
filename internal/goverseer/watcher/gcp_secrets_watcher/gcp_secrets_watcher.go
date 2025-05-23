@@ -182,7 +182,7 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 }
 
 // Creates a new GcpSecretsWatcher based on the passed config
-func New(config map[string]interface{}, factory ...SecretManagerClientFactory) (*GcpSecretsWatcher, error) { // MODIFIED SIGNATURE
+func New(config map[string]interface{}, factory ...SecretManagerClientFactory) (*GcpSecretsWatcher, error) {
 	cfg, err := ParseConfig(config)
 	if err != nil {
 		return nil, err
