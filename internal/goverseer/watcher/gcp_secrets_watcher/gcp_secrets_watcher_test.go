@@ -210,8 +210,8 @@ type mockSecretManagerClientFactory struct {
 	mock.Mock
 }
 
-func (m *mockSecretManagerClientFactory) CreateClient(ctx context.Context, credentialFile string) (SecretManagerClientInterface, error) {
-	args := m.Called(ctx, credentialFile)
+func (m *mockSecretManagerClientFactory) CreateClient(ctx context.Context, credentialsFile string) (SecretManagerClientInterface, error) {
+	args := m.Called(ctx, credentialsFile)
 	if client, ok := args.Get(0).(SecretManagerClientInterface); ok {
 		return client, args.Error(1)
 	}
