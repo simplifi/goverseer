@@ -238,7 +238,7 @@ func (w *GcpSecretsWatcher) getSecretEtag(projectID string) (string, error) {
 
 	resp, err := w.client.GetSecretVersion(w.ctx, req)
 	if err != nil {
-		
+
 		return "", fmt.Errorf("failed to access secret version %s in %s: %w", w.SecretName, projectID, err)
 	}
 	return resp.Etag, nil
