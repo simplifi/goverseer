@@ -49,18 +49,18 @@ type Config struct {
 // Defines an interface for creating Secret Manager clients
 // Helpful for testing purposes, allowing us to mock the client creation
 type SecretManagerClientFactory interface {
-	CreateClient(ctx context.Context, credentialsfile string) (SecretManagerClientInterface, error)
+	CreateClient(ctx context.Context, credentialsFile string) (SecretManagerClientInterface, error)
 }
 
 // Creates a real Secret Manager client
 // Can be replaced with a mock implementation for testing
 type defaultSecretManagerClientFactory struct{}
 
-func (f *defaultSecretManagerClientFactory) CreateClient(ctx context.Context, credentialsfile string) (SecretManagerClientInterface, error) {
+func (f *defaultSecretManagerClientFactory) CreateClient(ctx context.Context, credentialsFile string) (SecretManagerClientInterface, error) {
 	var client *secretmanager.Client
 	var err error
-	if credentialsfile != "" {
-		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(credentialsfile))
+	if credentialsFile != "" {
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(credentialsFile))
 	} else {
 		client, err = secretmanager.NewClient(ctx)
 	}
