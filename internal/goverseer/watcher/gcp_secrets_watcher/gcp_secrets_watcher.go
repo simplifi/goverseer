@@ -238,6 +238,7 @@ func (w *GcpSecretsWatcher) getSecretEtag(projectID string) (string, error) {
 
 	resp, err := w.client.GetSecretVersion(w.ctx, req)
 	if err != nil {
+		
 		return "", fmt.Errorf("failed to access secret version %s in %s: %w", w.SecretName, projectID, err)
 	}
 	return resp.Etag, nil
@@ -252,7 +253,7 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 
 	resp, err := w.client.AccessSecretVersion(w.ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("failed to access secret %s in %s: %v", w.SecretName, projectID, err)
+		logger.Log.Error("Failed to access secret version", "secret", w.SecretName, "project", projectID, "err", err)
 	}
 	return string(resp.Payload.Data), nil
 }
@@ -283,7 +284,7 @@ func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
 				// Gets Secret Value (only if ETag changed)
 				secretValue, err := w.getSecretValue(w.ProjectID)
 				if err != nil {
-					logger.Log.Info("Failed to get secret value after ETag change", "secret", w.SecretName, "project", w.ProjectID, "old_etag", w.lastKnownETag, "error", err)
+					logger.Log.Error("Failed to get secret value after ETag change", "secret", w.SecretName, "project", w.ProjectID, "old_etag", w.lastKnownETag, "error", err)
 					time.Sleep(time.Duration(w.SecretErrorWaitSeconds) * time.Second)
 					continue
 				}
