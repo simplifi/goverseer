@@ -33,6 +33,7 @@ The available values for `watcher.type` are:
 
 - `file`: [File Watcher](docs/watchers/file_watcher.md)
 - `gce_metadata`: [GCE Metadata Watcher](docs/watchers/gce_metadata_watcher.md)
+- `gcp_secrets`: [GCP Secrets Watcher](docs/watchers/gcp_secrets_watcher.md)
 - `time`: [Time Watcher](docs/watchers/time_watcher.md)
 
 The available values for `executioner.type` are:
