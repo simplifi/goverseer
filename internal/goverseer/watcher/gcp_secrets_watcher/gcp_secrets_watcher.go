@@ -261,7 +261,7 @@ func (w *GcpSecretsWatcher) getSecretValue(projectID string) (string, error) {
 // Watches the GCP Secrets Manager for changes in ETag
 // and sends the new value to the changes channel
 func (w *GcpSecretsWatcher) Watch(change chan interface{}) {
-	logger.Log.Info("starting GCP Secrets Manager watcher for project: %s, secret: %s", w.ProjectID, w.SecretName)
+	logger.Log.Info("Starting GCP Secrets Manager watcher for project", w.ProjectID, "secret:", w.SecretName)
 
 	for {
 		select {
