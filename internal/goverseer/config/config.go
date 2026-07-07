@@ -1,7 +1,9 @@
 package config
 
 import (
-	"github.com/spf13/viper"
+	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 // WatcherConfig is a custom type that handles dynamic unmarshalling
@@ -49,21 +51,18 @@ type Config struct {
 
 // FromFile reads a configuration file and unmarshals it into a Config struct
 func FromFile(path string) (*Config, error) {
-	v := viper.New()
-	v.SetConfigFile(path)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := v.ReadInConfig(); err != nil {
+	var cfgMap map[string]interface{}
+	if err := yaml.Unmarshal(raw, &cfgMap); err != nil {
 		return nil, err
 	}
 
 	var cfg Config
-	if err := checkConfigFields(v.AllSettings(), &cfg); err != nil {
-		return nil, err
-	}
-	if err := v.UnmarshalExact(&cfg); err != nil {
-		return nil, err
-	}
-	if err := Validate(&cfg); err != nil {
+	if err := Decode(cfgMap, &cfg); err != nil {
 		return nil, err
 	}
 

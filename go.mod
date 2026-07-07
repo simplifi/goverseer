@@ -6,11 +6,12 @@ toolchain go1.24.2
 
 require (
 	github.com/charmbracelet/log v0.4.0
+	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/googleapis/gax-go/v2 v2.14.1
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -25,7 +26,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -55,7 +55,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/grpc v1.72.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
