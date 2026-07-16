@@ -10,8 +10,8 @@ To use the Log Executioner, configure it in your Goverseer config file. The
 following configuration option is available:
 
 - `tag`: (Optional) This allows you to specify a custom tag that will be added
-  to the log message. This can be helpful for filtering and searching logs.
-  Defaults to no tag.
+  to the log message. This can be helpful for filtering and searching logs. Must
+  be a string if provided. Defaults to no tag.
 
 **Example Configuration:**
 

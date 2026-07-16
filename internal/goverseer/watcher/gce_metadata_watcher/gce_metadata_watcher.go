@@ -30,7 +30,7 @@ const (
 
 	// DefaultMetadataErrorWaitSeconds is the default number of seconds to wait
 	// before retrying a failed metadata request
-	DefaultMetadataErrorWaitSeconds = 1
+	DefaultMetadataErrorWaitSeconds = 10
 )
 
 // Config is the configuration for a GCE metadata watcher
@@ -38,36 +38,31 @@ type Config struct {
 	// Source is the metadata source to watch
 	// Valid values are 'instance' and 'project'
 	// Default is 'instance'
-	Source string
+	Source string `mapstructure:"source" validate:"oneof=instance project"`
 
 	// Key is the key to watch in the GCE metadata
 	// This is required config value
-	Key string
+	Key string `mapstructure:"key" validate:"required"`
 
 	// Recursive is whether to recurse the metadata keys
 	// Default is false
-	Recursive bool
+	Recursive bool `mapstructure:"recursive"`
 
 	// MetadataUrl is the URL this watcher will use when reading from the GCE
 	// metadata server
 	// It can be useful to override during testing
 	// e.g. http://localhost:8888/computeMetadata/v1
-	MetadataUrl string
+	MetadataUrl string `mapstructure:"metadata_url" validate:"required"`
 
 	// MetadataErrorWaitSeconds is the number of seconds to wait before retrying
 	// a failed metadata request. This prevents hammering the metadata server.
-	// Default is 1 second
-	MetadataErrorWaitSeconds int
+	// Default is 10 seconds
+	MetadataErrorWaitSeconds int `mapstructure:"metadata_error_wait_seconds" validate:"gte=1"`
 }
 
 // ParseConfig parses the config for the watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*Config, error) {
-	cfgMap, ok := config.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid config")
-	}
-
+func ParseConfig(input interface{}) (*Config, error) {
 	cfg := &Config{
 		Source:                   DefaultSource,
 		Recursive:                DefaultRecursive,
@@ -75,58 +70,8 @@ func ParseConfig(config interface{}) (*Config, error) {
 		MetadataErrorWaitSeconds: DefaultMetadataErrorWaitSeconds,
 	}
 
-	// If source is set, it should be one of the valid sources
-	if cfgMap["source"] != nil {
-		if source, ok := cfgMap["source"].(string); ok {
-			if source != ValidSourceInstance && source != ValidSourceProject {
-				return nil, fmt.Errorf("source must be one of %s or %s", ValidSourceInstance, ValidSourceProject)
-			}
-			cfg.Source = source
-		} else if cfgMap["source"] != nil {
-			return nil, fmt.Errorf("source must be a string")
-		}
-	}
-
-	// If recursive is set, it should be a boolean
-	if cfgMap["recursive"] != nil {
-		if recursive, ok := cfgMap["recursive"].(bool); ok {
-			cfg.Recursive = recursive
-		} else if cfgMap["recursive"] != nil {
-			return nil, fmt.Errorf("recursive must be a boolean")
-		}
-	}
-
-	// Key is required and must be a string
-	if key, ok := cfgMap["key"].(string); ok {
-		if key == "" {
-			return nil, fmt.Errorf("key must not be empty")
-		}
-		cfg.Key = key
-	} else if cfgMap["key"] != nil {
-		return nil, fmt.Errorf("key must be a string")
-	} else {
-		return nil, fmt.Errorf("key is required")
-	}
-
-	// If metadata_url is set, it should be a string
-	if cfgMap["metadata_url"] != nil {
-		if metadataUrl, ok := cfgMap["metadata_url"].(string); ok {
-			if metadataUrl == "" {
-				return nil, fmt.Errorf("metadata_url must not be empty")
-			}
-			cfg.MetadataUrl = metadataUrl
-		} else if cfgMap["metadata_url"] != nil {
-			return nil, fmt.Errorf("metadata_url must be a string")
-		}
-	}
-
-	// If metadata_error_wait_seconds is set, it should be an integer
-	if cfgMap["metadata_error_wait_seconds"] != nil {
-		if metadataErrorWaitSeconds, ok := cfgMap["metadata_error_wait_seconds"].(int); ok {
-			cfg.MetadataErrorWaitSeconds = metadataErrorWaitSeconds
-		} else if cfgMap["metadata_error_wait_seconds"] != nil {
-			return nil, fmt.Errorf("metadata_error_wait_seconds must be an integer")
-		}
+	if err := config.Decode(input, cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
@@ -156,6 +101,7 @@ func New(cfg config.Config) (*GceMetadataWatcher, error) {
 
 	return &GceMetadataWatcher{
 		Config: Config{
+			Source:                   pcfg.Source,
 			Key:                      pcfg.Key,
 			Recursive:                pcfg.Recursive,
 			MetadataUrl:              pcfg.MetadataUrl,

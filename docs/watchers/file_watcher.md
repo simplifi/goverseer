@@ -9,9 +9,11 @@ path to the changed file is passed to the executioner for processing.
 To use the File Watcher, you need to configure it in your Goverseer config file.
 The following configuration options are available:
 
-- `path`: This is the path to the file that should be monitored for changes
+- `path`: (Required) This is the path to the file that should be monitored for
+  changes. Must be a non-empty string.
 - `poll_seconds`: (Optional) This specifies the frequency in seconds for
-  checking if the file has been modified. Defaults to `5` if not provided.
+  checking if the file has been modified. Must be greater than or equal to `1`.
+  Defaults to `5` if not provided.
 
 **Example Configuration:**
 

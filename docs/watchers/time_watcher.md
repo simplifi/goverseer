@@ -8,8 +8,9 @@ useful for testing and debugging.
 To use the Time Watcher, configure it in your Goverseer config file. The
 following configuration option is available:
 
-- `poll_seconds`: This specifies the interval, in seconds, at which the watcher
-  will trigger the executioner.
+- `poll_seconds`: (Optional) This specifies the interval, in seconds, at which
+  the watcher will trigger the executioner. Must be greater than or equal to
+  `1`. Defaults to `1` if not provided.
 
 **Example Configuration:**
 

@@ -45,6 +45,10 @@ The configuration options for `watcher.config` and `executioner.config` are
 determined by the selected type. See the documentation for the specific watcher
 and executioner type for more details on available configuration options.
 
+Goverseer validates the configuration at startup. Unknown top-level fields,
+unknown watcher/executioner options, invalid types, missing required fields, and
+invalid values will cause startup to fail with a config error.
+
 ## Building
 
 To build Goverseer, simply run `make build`. Once complete, you should see a
@@ -53,5 +57,8 @@ binary in the root of your checkout.
 ## Development
 
 To run locally during development, run `go run ./cmd/goverseer --help`.
+
+If adding watcher or executioner configs, please use typed config structs with
+`mapstructure` and `validate` tags as well as `config.Decode`.
 
 To run all tests, run `make test`.

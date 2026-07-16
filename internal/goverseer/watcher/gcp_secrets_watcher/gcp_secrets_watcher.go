@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/simplifi/goverseer/internal/goverseer/config"
 	"github.com/simplifi/goverseer/internal/goverseer/logger"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
@@ -24,26 +25,26 @@ const (
 
 type Config struct {
 	// GCP project ID where the secret is located
-	ProjectID string
+	ProjectID string `mapstructure:"project_id" validate:"required"`
 
 	// Name of the secret to watch in the specified project
-	SecretName string
+	SecretName string `mapstructure:"secret_name" validate:"required"`
 
 	// Path to the GCP credentials file
 	// If not set, the default ADC will be used
-	CredentialsFile string
+	CredentialsFile string `mapstructure:"credentials_file"`
 
 	// Interval in seconds to poll the secret
 	// Default is 60 seconds
-	CheckIntervalSeconds int
+	CheckIntervalSeconds int `mapstructure:"check_interval_seconds" validate:"gte=1"`
 
 	// Number of seconds to wait
 	// before retrying a failed secret access
 	// Default is 5 seconds
-	SecretErrorWaitSeconds int
+	SecretErrorWaitSeconds int `mapstructure:"secret_error_wait_seconds" validate:"gte=1"`
 
 	// Path to the file to update with the secrets' value
-	SecretsFilePath string
+	SecretsFilePath string `mapstructure:"secrets_file_path" validate:"required"`
 }
 
 // Defines an interface for creating Secret Manager clients
@@ -87,94 +88,15 @@ type GcpSecretsWatcher struct {
 	clientFactory SecretManagerClientFactory
 }
 
-// Parses a required string field from config
-// Returns an error if the field is missing or not a string
-// Also checks if the string is empty
-// (Used for project_id, secret_name, and secrets_file_path)
-func parseRequiredString(cfgMap map[string]interface{}, fieldName string) (string, error) {
-	if raw, ok := cfgMap[fieldName]; ok {
-		if val, isString := raw.(string); isString {
-			if val == "" {
-				return "", fmt.Errorf("%s must not be empty", fieldName)
-			}
-			return val, nil
-		}
-		return "", fmt.Errorf("%s must be a string", fieldName)
-	}
-	return "", fmt.Errorf("%s is required", fieldName)
-}
-
-// Parses an optional string field from config
-// Returns an error if the field is not a string
-// Also checks if the string is empty
-// (Used for credentials_file)
-func parseOptionalString(cfgMap map[string]interface{}, fieldName string) (string, error) {
-	if raw, ok := cfgMap[fieldName]; ok {
-		if val, isString := raw.(string); isString {
-			return val, nil
-		}
-		return "", fmt.Errorf("%s must be a string", fieldName)
-	}
-	return "", nil
-}
-
-// Parses an optional positive integer field from config
-// Returns an error if the field is not an integer
-// Also checks if the integer is positive
-// (Used for check_interval_seconds and secret_error_wait_seconds)
-func parseOptionalPositiveInt(cfgMap map[string]interface{}, fieldName string) (int, error) {
-	if raw, ok := cfgMap[fieldName]; ok {
-		if val, isInt := raw.(int); isInt {
-			if val <= 0 {
-				return 0, fmt.Errorf("%s must be a positive integer", fieldName)
-			}
-			return val, nil
-		}
-		return 0, fmt.Errorf("%s must be an integer", fieldName)
-	}
-	return 0, nil
-}
-
 // Parses and validates the config for the watcher,
 // sets defaults if missing, and returns the config
-func ParseConfig(config map[string]interface{}) (*Config, error) {
+func ParseConfig(input interface{}) (*Config, error) {
 	cfg := &Config{
 		CheckIntervalSeconds:   DefaultCheckIntervalSeconds,
 		SecretErrorWaitSeconds: DefaultSecretErrorWaitSeconds,
 	}
-	var err error
 
-	var val int
-
-	cfg.ProjectID, err = parseRequiredString(config, "project_id")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.SecretName, err = parseRequiredString(config, "secret_name")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.CredentialsFile, err = parseOptionalString(config, "credentials_file")
-	if err != nil {
-		return nil, err
-	}
-
-	if val, err = parseOptionalPositiveInt(config, "check_interval_seconds"); err != nil {
-		return nil, err
-	} else if val != 0 {
-		cfg.CheckIntervalSeconds = val
-	}
-
-	if val, err = parseOptionalPositiveInt(config, "secret_error_wait_seconds"); err != nil {
-		return nil, err
-	} else if val != 0 {
-		cfg.SecretErrorWaitSeconds = val
-	}
-
-	cfg.SecretsFilePath, err = parseRequiredString(config, "secrets_file_path")
-	if err != nil {
+	if err := config.Decode(input, cfg); err != nil {
 		return nil, err
 	}
 
@@ -182,8 +104,8 @@ func ParseConfig(config map[string]interface{}) (*Config, error) {
 }
 
 // Creates a new GcpSecretsWatcher based on the passed config
-func New(config map[string]interface{}, factory ...SecretManagerClientFactory) (*GcpSecretsWatcher, error) {
-	cfg, err := ParseConfig(config)
+func New(input interface{}, factory ...SecretManagerClientFactory) (*GcpSecretsWatcher, error) {
+	cfg, err := ParseConfig(input)
 	if err != nil {
 		return nil, err
 	}

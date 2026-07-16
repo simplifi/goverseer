@@ -32,79 +32,33 @@ const (
 // Config is the configuration for a shell executioner
 type Config struct {
 	// Command is the command to execute
-	Command string
+	Command string `mapstructure:"command" validate:"required"`
 
 	// Shell is the shell to use when executing the command
 	// Options can also be passed to the shell here
-	Shell string
+	Shell string `mapstructure:"shell" validate:"required"`
 
 	// WorkDir is the directory in which the ShellExecutioner will store
 	// the data to pass into the command
-	WorkDir string
+	WorkDir string `mapstructure:"work_dir" validate:"required"`
 
 	// PersistWorkDir determines whether the data will persist after completion
 	// This can be useful to enable when troubleshooting configured commands but
 	// should generally remain disabled
-	PersistData bool
+	PersistData bool `mapstructure:"persist_data"`
 }
 
 // ParseConfig parses the config for a log executioner
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*Config, error) {
-	cfgMap, ok := config.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid config")
-	}
-
+func ParseConfig(input interface{}) (*Config, error) {
 	cfg := &Config{
 		Shell:       DefaultShell,
 		PersistData: DefaultPersistData,
 		WorkDir:     DefaultWorkDir,
 	}
 
-	// Command is required and must be a string
-	if command, ok := cfgMap["command"].(string); ok {
-		if command == "" {
-			return nil, fmt.Errorf("command must not be empty")
-		}
-		cfg.Command = command
-	} else if cfgMap["command"] != nil {
-		return nil, fmt.Errorf("command must be a string")
-	} else {
-		return nil, fmt.Errorf("command is required")
-	}
-
-	// If shell is set, it should be a string
-	if cfgMap["shell"] != nil {
-		if shell, ok := cfgMap["shell"].(string); ok {
-			if shell == "" {
-				return nil, fmt.Errorf("shell must not be empty")
-			}
-			cfg.Shell = shell
-		} else if cfgMap["shell"] != nil {
-			return nil, fmt.Errorf("shell must be a string")
-		}
-	}
-
-	// If persist_data is set, it should be a string
-	if cfgMap["persist_data"] != nil {
-		if persistData, ok := cfgMap["persist_data"].(bool); ok {
-			cfg.PersistData = persistData
-		} else if cfgMap["persist_data"] != nil {
-			return nil, fmt.Errorf("persist_data must be a boolean")
-		}
-	}
-
-	// If work_dir is set, it should be a string
-	if cfgMap["work_dir"] != nil {
-		if workDir, ok := cfgMap["work_dir"].(string); ok {
-			if workDir == "" {
-				return nil, fmt.Errorf("work_dir must not be empty")
-			}
-			cfg.WorkDir = workDir
-		} else if cfgMap["work_dir"] != nil {
-			return nil, fmt.Errorf("work_dir must be a string")
-		}
+	if err := config.Decode(input, cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

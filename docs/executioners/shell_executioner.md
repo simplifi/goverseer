@@ -12,16 +12,18 @@ command via an environment variable named `GOVERSEER_DATA`.
 To use the Shell Executioner, you need to configure it in your Goverseer config
 file. The following configuration options are available:
 
-- `command`: This is the shell command you want to execute. For example,
-  `echo "Data received: $GOVERSEER_DATA"`.
+- `command`: (Required) This is the shell command you want to execute. Must be a
+  non-empty string. For example, `echo "Data received: $GOVERSEER_DATA"`.
 - `shell`: (Optional) This specifies the shell to use for executing the command.
-  Defaults to `/bin/sh -ec` if not provided.
+  Must be a non-empty string if provided. Defaults to `/bin/sh -ec` if not
+  provided.
 - `work_dir`: (Optional) This specifies the directory where the executioner
-  stores the data file. Defaults to the `/tmp` if not provided.
+  stores the data file. Must be a non-empty string if provided. Defaults to
+  `/tmp` if not provided.
 - `persist_data`: (Optional) This determines whether the command and data will
   persist after completion. This can be useful to enable when troubleshooting
-  configured commands but should generally remain disabled otherwise. Defaults
-  to `false` if not provided.
+  configured commands but should generally remain disabled otherwise. Must be a
+  boolean if provided. Defaults to `false` if not provided.
 
 **Example Configuration:**
 

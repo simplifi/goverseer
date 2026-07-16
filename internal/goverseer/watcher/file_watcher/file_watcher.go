@@ -1,7 +1,6 @@
 package file_watcher
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -17,44 +16,21 @@ const (
 // Config is the configuration for a file watcher
 type Config struct {
 	// Path is the path to the file to watch
-	Path string
+	Path string `mapstructure:"path" validate:"required"`
 
 	// PollSeconds is the number of seconds to wait between ticks
-	PollSeconds int
+	PollSeconds int `mapstructure:"poll_seconds" validate:"gte=1"`
 }
 
 // ParseConfig parses the config for a file watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*Config, error) {
-	cfgMap, ok := config.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid config")
-	}
-
+func ParseConfig(input interface{}) (*Config, error) {
 	cfg := &Config{
 		PollSeconds: DefaultPollSeconds,
 	}
 
-	// Path is required and must be a string
-	if path, ok := cfgMap["path"].(string); ok {
-		if path == "" {
-			return nil, fmt.Errorf("path must not be empty")
-		}
-		cfg.Path = path
-	} else if cfgMap["path"] != nil {
-		return nil, fmt.Errorf("path must be a string")
-	} else {
-		return nil, fmt.Errorf("path is required")
-	}
-
-	// If PollSeconds is set, it must be a positive number
-	if pollSeconds, ok := cfgMap["poll_seconds"].(int); ok {
-		if pollSeconds < 1 {
-			return nil, fmt.Errorf("poll_seconds must be greater than or equal to 1")
-		}
-		cfg.PollSeconds = pollSeconds
-	} else if cfgMap["poll_seconds"] != nil {
-		return nil, fmt.Errorf("poll_seconds must be an integer")
+	if err := config.Decode(input, cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

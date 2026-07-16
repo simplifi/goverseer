@@ -1,7 +1,6 @@
 package time_watcher
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/simplifi/goverseer/internal/goverseer/config"
@@ -16,28 +15,18 @@ const (
 // TimeWatcherConfig is the configuration for a time watcher
 type Config struct {
 	// PollSeconds is the number of seconds to wait between ticks
-	PollSeconds int
+	PollSeconds int `mapstructure:"poll_seconds" validate:"gte=1"`
 }
 
 // ParseConfig parses the config for a time watcher
 // It validates the config, sets defaults if missing, and returns the config
-func ParseConfig(config interface{}) (*Config, error) {
-	cfgMap, ok := config.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid config")
-	}
-
+func ParseConfig(input interface{}) (*Config, error) {
 	twc := &Config{
 		PollSeconds: DefaultPollSeconds,
 	}
 
-	if pollSeconds, ok := cfgMap["poll_seconds"].(int); ok {
-		if pollSeconds < 1 {
-			return nil, fmt.Errorf("poll_seconds must be greater than or equal to 1")
-		}
-		twc.PollSeconds = pollSeconds
-	} else if cfgMap["poll_seconds"] != nil {
-		return nil, fmt.Errorf("poll_seconds must be an integer")
+	if err := config.Decode(input, twc); err != nil {
+		return nil, err
 	}
 
 	return twc, nil

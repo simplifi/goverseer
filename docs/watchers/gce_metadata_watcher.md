@@ -13,16 +13,17 @@ config file. The following configuration options are available:
 - `source`: (Optional) This is the source of the metadata value you want to
   monitor. It must be set to either `instance` or `project`. Defaults to
   `instance` if not provided.
-- `key`: This is the GCE metadata key you want to monitor. For example,
-  `instance/attributes/my-key`.
+- `key`: (Required) This is the GCE metadata key you want to monitor. Must be a
+  non-empty string. For example, `instance/attributes/my-key`.
 - `recursive`: (Optional) This determines whether to fetch metadata recursively.
   If set to `true`, all subkeys under the specified key will be monitored.
   Defaults to `false`.
 - `metadata_url`: (Optional) This allows overriding the default GCE Metadata
-  server URL. Useful for testing with a local server. Defaults to
-  `http://metadata.google.internal/computeMetadata/v1`.
+  server URL. Must be a non-empty string if provided. Useful for testing with a
+  local server. Defaults to `http://metadata.google.internal/computeMetadata/v1`.
 - `metadata_error_wait_seconds`: (Optional) This determines the wait time in
-  seconds before retrying after a metadata fetch error. Defaults to `10`.
+  seconds before retrying after a metadata fetch error. Must be greater than or
+  equal to `1`. Defaults to `10`.
 
 **Example Configuration:**
 
