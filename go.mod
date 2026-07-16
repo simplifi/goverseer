@@ -7,7 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/go-viper/mapstructure/v2 v2.2.1
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/googleapis/gax-go/v2 v2.14.1
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
